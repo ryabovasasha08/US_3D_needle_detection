@@ -102,9 +102,6 @@ def mha_read_header(filename):
     
     return info
 
-
-
-
 '''
 Function for retrieving a 3d image based on the .mhd file
 
@@ -114,13 +111,17 @@ def get_image_array(full_fileName_mhd):
     
     full_fileName_raw = full_fileName_mhd[:-3]+"raw"
     
+    '''
+    
     if os.path.isfile(full_fileName_mhd) and os.path.isfile(full_fileName_raw):
         print('US-files exist.')
     else:
         warningMessage = f'Warning: one or both US-files do not exist. Please check the path-name:\n{full_fileName_mhd}\n{full_fileName_raw}'
         input('Press Enter to continue...')
-        raise ValueError(warningMessage)
-
+        raise ValueError(warningMessage) 
+        
+    '''
+    
     # Get information from mhd-file:
     info_US = mha_read_header(full_fileName_mhd)
 
@@ -137,18 +138,25 @@ def get_image_array(full_fileName_mhd):
         image_US = []
         raw = []
         bn += 1
-        raw = np.fromfile(fileID_US, dtype=np.float32, count=size_1_slice * batchSize)
+        data = fileID_US.read(size_1_slice * batchSize * 4) # Assuming float32 data type (4 bytes)
+        
+        if not data:
+            break
+
+        raw = np.frombuffer(data, dtype=np.float32)
         
         if len(raw) % size_1_slice == 0:
-            image_US = raw.reshape((info_US['Dimensions'][0], info_US['Dimensions'][1], info_US['Dimensions'][2], len(raw) // size_1_slice))
+            image_US = raw.reshape((info_US['Dimensions'][0], info_US['Dimensions'][1], info_US['Dimensions'][2], len(raw) // size_1_slice), order="F")
         else:
             slices_complete = len(raw) // size_1_slice
             raw = raw[:size_1_slice * slices_complete]
-            image_US = raw.reshape((info_US['Dimensions'][0], info_US['Dimensions'][1], slices_complete))
+            image_US = raw.reshape((info_US['Dimensions'][0], info_US['Dimensions'][1], slices_complete), order="F")
         
-        img_total.append(image_US)
+        if not img_total:
+            img_total = image_US
+        else:
+            img_total = np.concatenate((img_total,image_US), axis=2)
 
-        if len(raw) < size_1_slice * batchSize:
-            break
+    fileID_US.close()
 
-    return np.concatenate(img_total, axis=2)
+    return img_total
