@@ -8,6 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms, utils
+from skimage.transform import resize
 
 class ImageDataset(Dataset):
     """US Images with a tip needle dataset."""
@@ -42,7 +43,14 @@ class ImageDataset(Dataset):
             us_tip_coords[2]-mask_radius:us_tip_coords[2]+mask_radius
         ] = np.full((mask_radius*2, mask_radius*2,mask_radius*2), 1)
         
-        sample = {'image': input_image, 'mask': mask_image, 'label': us_tip_coords}
+        ratio = 128/135
+        us_tip_coords_resized = np.around(us_tip_coords*ratio).astype(int)
+        
+        input_image = resize(input_image, (128, 128, 128))
+        mask_image = resize(mask_image, (128, 128, 128))
+
+        
+        sample = {'image': input_image, 'mask': mask_image, 'label': us_tip_coords_resized}
 
         if self.transform:
             sample = self.transform(sample)
