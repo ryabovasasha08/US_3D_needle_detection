@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from DoubleConv import DoubleConv
+from unet.DoubleConv import DoubleConv
 
 class Down(nn.Module):
     """Downscaling with maxpool then double conv"""
