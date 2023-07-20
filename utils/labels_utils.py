@@ -55,6 +55,10 @@ Example usage:
 
 '''
 def transformTo(coords_1, method, isShifted):
+    '''
+    -------------------------------------------------------
+    ---- FOR OLD_DATA AND OLD_CALIBRATION_METHOD-----------
+    --------------------------------------------------------
     # Transformation matrices
     T_needle_tip = np.array([[-0.1601, 3.1823, 0.1383, 13.8778],
                             [0.0178, 0.0806, -3.3695, 112.5630],
@@ -69,7 +73,13 @@ def transformTo(coords_1, method, isShifted):
     if isShifted:
         T = T_needle_tip_shifted
     else:
-        T = T_needle_tip
+        T = T_needle_tip'''
+        
+    T = np.array([[-0.0000,    3.2500,    0.0064,  97.3511],
+                  [-0.0000,    0.0000,   -3.3511,   99.4415],
+                  [-3.3500,   -0.0000,   -0.0000,  159.1625],
+                  [0.0000,   -0.0000,   -0.0000,    1.0000]])
+
 
     coords_1 = np.append(coords_1, 1)  # Add 1 to coords_1
 
