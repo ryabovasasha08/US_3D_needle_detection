@@ -29,17 +29,18 @@ def getDatapointResized(filename, frame_num, labels, mask_diam=3, resizeTo = 135
     us_tip_coords = np.around(labels).astype(int)
     
     #resize everything to 128*128*128 and normalize
-    ratio = 128/135
+    ratio = resizeTo/input_image.shape[0]
     us_tip_coords_resized = np.around(us_tip_coords*ratio).astype(int)
+    us_tip_coord_flattened = (resizeTo * resizeTo * us_tip_coords_resized[2]) + (resizeTo * us_tip_coords_resized[1]) + us_tip_coords_resized[0]
     
-    input_image = resize(input_image, (128, 128, 128))[np.newaxis, :, :, :]
+    input_image = resize(input_image, (resizeTo, resizeTo, resizeTo))[np.newaxis, :, :, :]
     mean = np.mean(input_image)
     std = np.std(input_image)
     input_image = (input_image - mean) / std
     
-    mask_image = resize(mask_image, (128, 128, 128))[np.newaxis, :, :, :]
+    mask_image = resize(mask_image, (resizeTo, resizeTo, resizeTo))[np.newaxis, :, :, :]
 
-    return input_image, mask_image, us_tip_coords_resized
+    return input_image, mask_image, us_tip_coords_resized, us_tip_coord_flattened
 
 class ImageDataset(Dataset):
     """US Images with a tip needle dataset."""
@@ -63,10 +64,10 @@ class ImageDataset(Dataset):
         if torch.is_tensor(idx):
             idx = idx.tolist()
 
-        input_img, mask_img, us_tip_coords_resized = \
+        input_img, mask_img, us_tip_coords_resized, us_tip_coords_flattened_resized = \
             getDatapointResized(self.X[idx, 0], int(float(self.X[idx, 1])), self.y[idx], mask_diam=self.mask_diam, resizeTo=self.resizeTo)
 
-        sample = {'image': input_img, 'mask': mask_img, 'label': us_tip_coords_resized}
+        sample = {'image': input_img, 'mask': mask_img, 'label': us_tip_coords_resized, 'label_1D':us_tip_coords_flattened_resized}
 
         if self.transform:
             sample = self.transform(sample)
