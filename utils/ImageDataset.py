@@ -44,7 +44,7 @@ def getDatapointResized(filename, frame_num, labels, mask_diam=3, resizeTo = 135
 class ImageDataset(Dataset):
     """US Images with a tip needle dataset."""
 
-    def __init__(self, X, y, transform=None):
+    def __init__(self, X, y, mask_diam=3, resizeTo=128, transform=None):
         """
         Arguments:
             transform (callable, optional): Optional transform to be applied
@@ -52,6 +52,8 @@ class ImageDataset(Dataset):
         """
         self.X = X
         self.y = y
+        self.resizeTo = resizeTo
+        self.mask_diam = mask_diam
         self.transform = transform
 
     def __len__(self):
@@ -62,7 +64,7 @@ class ImageDataset(Dataset):
             idx = idx.tolist()
 
         input_img, mask_img, us_tip_coords_resized = \
-            getDatapointResized(self.X[idx, 0], self.X[idx, 1], self.y[idx], mask_diam=3, resizeTo=128)
+            getDatapointResized(self.X[idx, 0], int(float(self.X[idx, 1])), self.y[idx], mask_diam=self.mask_diam, resizeTo=self.resizeTo)
 
         sample = {'image': input_img, 'mask': mask_img, 'label': us_tip_coords_resized}
 
