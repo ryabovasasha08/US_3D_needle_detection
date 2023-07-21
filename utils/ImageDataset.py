@@ -18,6 +18,7 @@ def getDatapointResized(filename, frame_num, labels, mask_diam=3, resizeTo = 135
     # create frame image based on frame number and filename
     input_image = get_image_array(filename)[:, :, :, frame_num]
 
+    '''
     # create mask for the frame image
     mask_image = np.zeros((input_image.shape))
     mask_image[
@@ -25,6 +26,7 @@ def getDatapointResized(filename, frame_num, labels, mask_diam=3, resizeTo = 135
         np.around(labels[1]-mask_diam/2).astype(int):np.around(labels[1]+mask_diam/2).astype(int), 
         np.around(labels[2]-mask_diam/2).astype(int):np.around(labels[2]+mask_diam/2).astype(int)
     ] = 1
+    '''
     
     us_tip_coords = np.around(labels).astype(int)
     
@@ -38,7 +40,13 @@ def getDatapointResized(filename, frame_num, labels, mask_diam=3, resizeTo = 135
     std = np.std(input_image)
     input_image = (input_image - mean) / std
     
-    mask_image = resize(mask_image, (resizeTo, resizeTo, resizeTo))[np.newaxis, :, :, :]
+    mask_image = np.zeros((input_image.shape))
+    mask_image[
+        np.around(us_tip_coords_resized[0]-mask_diam/2).astype(int):np.around(us_tip_coords_resized[0]+mask_diam/2).astype(int), 
+        np.around(us_tip_coords_resized[1]-mask_diam/2).astype(int):np.around(us_tip_coords_resized[1]+mask_diam/2).astype(int), 
+        np.around(us_tip_coords_resized[2]-mask_diam/2).astype(int):np.around(us_tip_coords_resized[2]+mask_diam/2).astype(int)
+    ] = 1
+    
 
     return input_image, mask_image, us_tip_coords_resized, us_tip_coord_flattened
 
