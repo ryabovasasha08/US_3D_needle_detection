@@ -32,7 +32,7 @@ def show_sample(sample):
 def compare_input_target(inp_mask, target_mask):
     target_mask_np = target_mask.detach().numpy()
     inp_mask_np = inp_mask.detach().numpy()
-    print("Number of non-zero pixels of input: "+str(np.count_nonzero(inp_mask_np)) " vs "+ str(np.count_nonzero(target_mask_np)))
+    print("Number of non-zero pixels of input: "+str(np.count_nonzero(inp_mask_np)) + " vs "+ str(np.count_nonzero(target_mask_np)))
 
     pattern = (target_mask_np != 0) & (inp_mask_np != 0)
     num_same_pixels = np.count_nonzero(pattern)
