@@ -14,7 +14,7 @@ from skimage.transform import resize
 
 # since resolution is 3px=mm and we have +-1mm error, default mask is 3px radius
 # 135 is initial image size so also the default ResizeTo
-def getDatapointResized(filename, frame_num, labels, mask_diam=3, resizeTo = 135): 
+def getDatapointResized(filename, frame_num, labels, mask_diam=6, resizeTo = 135): 
     # create frame image based on frame number and filename
     input_image = get_image_array(filename)[:, :, :, frame_num]
 
@@ -41,19 +41,20 @@ def getDatapointResized(filename, frame_num, labels, mask_diam=3, resizeTo = 135
     input_image = (input_image - mean) / std
     
     mask_image = np.zeros((input_image.shape))
+    
     mask_image[
+        0,
         np.around(us_tip_coords_resized[0]-mask_diam/2).astype(int):np.around(us_tip_coords_resized[0]+mask_diam/2).astype(int), 
         np.around(us_tip_coords_resized[1]-mask_diam/2).astype(int):np.around(us_tip_coords_resized[1]+mask_diam/2).astype(int), 
         np.around(us_tip_coords_resized[2]-mask_diam/2).astype(int):np.around(us_tip_coords_resized[2]+mask_diam/2).astype(int)
     ] = 1
-    
 
     return input_image, mask_image, us_tip_coords_resized, us_tip_coord_flattened
 
 class ImageDataset(Dataset):
     """US Images with a tip needle dataset."""
 
-    def __init__(self, X, y, mask_diam=3, resizeTo=128, transform=None):
+    def __init__(self, X, y, mask_diam=6, resizeTo=128, transform=None):
         """
         Arguments:
             transform (callable, optional): Optional transform to be applied
@@ -79,5 +80,10 @@ class ImageDataset(Dataset):
 
         if self.transform:
             sample = self.transform(sample)
-
-        return sample
+            
+        # Check if data is correct, i.e. label is within range and mask is of correct size
+        if (sample['label'] > 1).all() and (sample['label'] < self.resizeTo).all() and (np.count_nonzero(sample['mask']) == self.mask_diam**3): 
+            return sample
+        else:
+            # return None to skip this sample
+            return None
