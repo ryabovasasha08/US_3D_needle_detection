@@ -6,6 +6,7 @@ import pandas as pd
 from skimage import io, transform
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy import ndimage
 from torch.utils.data import Dataset, DataLoader
 from skimage.transform import resize
 
@@ -35,7 +36,7 @@ def getDatapointResized(filename, frame_num, labels, mask_diam=6, resizeTo = 135
     us_tip_coords_resized = np.around(us_tip_coords*ratio).astype(int)
     us_tip_coord_flattened = (resizeTo * resizeTo * us_tip_coords_resized[2]) + (resizeTo * us_tip_coords_resized[1]) + us_tip_coords_resized[0]
     
-    input_image = resize(input_image, (resizeTo, resizeTo, resizeTo))[np.newaxis, :, :, :]
+    input_image = ndimage.zoom(input_image, (ratio, ratio, ratio))[np.newaxis, :, :, :]
     mean = np.mean(input_image)
     std = np.std(input_image)
     input_image = (input_image - mean) / std
@@ -78,6 +79,7 @@ class ImageDataset(Dataset):
 
         sample = {'image': input_img, 'mask': mask_img, 'label': us_tip_coords_resized, 'label_1D':us_tip_coords_flattened_resized}
 
+        # TODO: use transforms: https://pytorch.org/tutorials/beginner/data_loading_tutorial.html
         if self.transform:
             sample = self.transform(sample)
             
