@@ -37,4 +37,3 @@ def compare_input_target(inp_mask, target_mask):
     pattern = (target_mask_np != 0) & (inp_mask_np != 0)
     num_same_pixels = np.count_nonzero(pattern)
     print("Number of non-zero pixels on correct positions: "+str(num_same_pixels))
-    print("Plotting masks around ground truth needle tip... In blue - ground truth, in red - predictions")
