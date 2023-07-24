@@ -1,4 +1,4 @@
 data
 _pycache_
-utils._pycache_
+utils.__pycache__
 models._pycache_
