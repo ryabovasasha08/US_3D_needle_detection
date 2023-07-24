@@ -17,7 +17,11 @@ from skimage.transform import resize
 # 135 is initial image size so also the default ResizeTo
 def getDatapointResized(filename, frame_num, labels, mask_diam=6, resizeTo = 135): 
     # create frame image based on frame number and filename
-    input_image = get_image_array(filename)[:, :, :, frame_num]
+    f = filename[:-4].split("/")[-1]
+    h5_file = h5py.File('trainh5/'+f+'.hdf5', 'r')
+    data_set = h5_file['default']
+    input_image = data_set[:, :, :, frame_num]
+    h5_file.close()
 
     '''
     # create mask for the frame image
