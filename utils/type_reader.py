@@ -1,6 +1,5 @@
 import os
 import numpy as np
-from utils.type_reader import get_image_array
 import h5py
 from tqdm import tqdm
 
