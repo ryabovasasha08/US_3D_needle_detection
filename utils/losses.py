@@ -32,7 +32,7 @@ class IoULossModified(nn.Module):
 
     def forward(self, inputs, targets, smooth=1):
         
-        inputs_weight = 2
+        inputs_weight = 0.5
         
         #comment out if your model contains a sigmoid or equivalent activation layer
         inputs = torch.sigmoid(inputs)       
@@ -48,5 +48,8 @@ class IoULossModified(nn.Module):
         union = total - intersection 
         
         IoU = (intersection + smooth)/(union + smooth)
+        
+        # Punish large predicted masks   
+        size_penalty = torch.clamp(inputs.sum() / targets.sum(), max=1)  
                 
-        return 1 - IoU
+        return 1 - IoU * size_penalty
