@@ -9,7 +9,8 @@ import matplotlib.pyplot as plt
 from scipy import ndimage
 from torch.utils.data import Dataset, DataLoader
 from skimage.transform import resize
-
+import h5py
+from torch.utils.data._utils.collate import default_collate
 from utils.type_reader import get_image_array
 from skimage.transform import resize
 
@@ -18,9 +19,8 @@ from skimage.transform import resize
 def getDatapointResized(filename, frame_num, labels, mask_diam=6, resizeTo = 135): 
     # create frame image based on frame number and filename
     f = filename[:-4].split("/")[-1]
-    h5_file = h5py.File('trainh5/'+f+'.hdf5', 'r')
-    data_set = h5_file['default']
-    input_image = data_set[:, :, :, frame_num]
+    h5_file = h5py.File('../train/trainh5/'+f+'.hdf5', 'r')
+    input_image = h5_file['default'][frame_num]
     h5_file.close()
 
     '''
@@ -93,3 +93,10 @@ class ImageDataset(Dataset):
         else:
             # return None to skip this sample
             return None
+        
+# custom collate function to filter out None samples
+def my_collate(batch):
+
+  batch = [b for b in batch if b is not None]
+
+  return default_collate(batch)

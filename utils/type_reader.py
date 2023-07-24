@@ -171,5 +171,5 @@ def store_all_data_as_h5(filenames_array):
     for filename in tqdm(filenames_array):
         f = filename[:-4].split("/")[-1]
         new_file = h5py.File('../train/trainh5/'+f+'.hdf5', 'w')
-        new_file.create_dataset("default", data=get_image_array(filename))
+        new_file.create_dataset("default", data=np.transpose(get_image_array(filename),(3, 0, 1, 2)))
         new_file.close()
