@@ -42,6 +42,34 @@ def save_model(epochs, model, optimizer, criterion):
                 'optimizer_state_dict': optimizer.state_dict(),
                 'loss': criterion,
                 }, 'outputs/final_model.pth')
+
+
+def save_sample_mask(epoch, batch, inp_mask, target_mask):
+    target_mask_np = target_mask.detach().cpu().numpy()
+    inp_mask_np = inp_mask.detach().cpu().numpy()
+    
+    plt.figure()
+    # Get nonzero indices 
+    nz_indices = torch.nonzero(target_mask) 
+    mid = len(nz_indices) // 2
+    extr, x, y, z = nz_indices[mid]
+
+    plt.subplot(1, 3, 1)
+    plt.title("OYZ")
+    plt.imshow(target_mask_np[0, x, :, :], cmap='gray',  interpolation='none')
+    plt.imshow(inp_mask_np[0, x, :, :], cmap='jet',  interpolation='none', alpha = 0.7)
+    plt.subplot(1, 3, 2)
+    plt.title("OXZ")
+    plt.imshow(target_mask_np[0, :, y, :], cmap='gray',  interpolation='none')
+    plt.imshow(inp_mask_np[0, :, y, :], cmap='jet',  interpolation='none', alpha = 0.7)
+    plt.subplot(1, 3, 3)
+    plt.title("OXY")
+    plt.imshow(target_mask_np[0, :, :, z], cmap='gray',  interpolation='none')
+    plt.imshow(inp_mask_np[0, :, :, z], cmap='jet',  interpolation='none', alpha = 0.7)
+    
+    plt.axis('off')
+    plt.savefig('outputs/epoch_'+epoch+'_batch_'+batch+'.png')
+    
     
     
 def save_plots(
