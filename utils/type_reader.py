@@ -1,5 +1,8 @@
 import os
 import numpy as np
+from utils.type_reader import get_image_array
+import h5py
+from tqdm import tqdm
 
 '''
 Function for reading the header of an Insight Meta-Image (.mha,.mhd) file
@@ -160,3 +163,14 @@ def get_image_array(full_fileName_mhd):
     fileID_US.close()
 
     return img_total
+
+#---------------------------
+# ONLY NEEDS TO BE EXECUTED ONCE!
+#---------------------------
+def store_all_data_as_h5(filenames_array):
+    # read all files and store them under corresponding names 
+    for filename in tqdm(X[:, 0]):
+        f = filename[:-4].split("/")[-1]
+        new_file = h5py.File('../train/trainh5/'+f+'.hdf5', 'w')
+        new_file.create_dataset("default", data=get_image_array(filename))
+        new_file.close()
