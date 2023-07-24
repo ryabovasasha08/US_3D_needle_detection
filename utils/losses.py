@@ -49,7 +49,4 @@ class IoULossModified(nn.Module):
         
         IoU = (intersection + smooth)/(union + smooth)
         
-        # Punish large predicted masks   
-        size_penalty = torch.clamp(inputs.sum() / targets.sum(), max=1)  
-                
-        return 1 - IoU * size_penalty
+        return 1 - IoU
