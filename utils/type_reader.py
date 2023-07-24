@@ -169,7 +169,7 @@ def get_image_array(full_fileName_mhd):
 #---------------------------
 def store_all_data_as_h5(filenames_array):
     # read all files and store them under corresponding names 
-    for filename in tqdm(X[:, 0]):
+    for filename in tqdm(filenames_array):
         f = filename[:-4].split("/")[-1]
         new_file = h5py.File('../train/trainh5/'+f+'.hdf5', 'w')
         new_file.create_dataset("default", data=get_image_array(filename))
