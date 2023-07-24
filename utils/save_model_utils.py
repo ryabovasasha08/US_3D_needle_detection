@@ -68,7 +68,7 @@ def save_sample_mask(epoch, batch, inp_mask, target_mask):
     plt.imshow(inp_mask_np[0, :, :, z], cmap='jet',  interpolation='none', alpha = 0.7)
     
     plt.axis('off')
-    plt.savefig('outputs/epoch_'+epoch+'_batch_'+batch+'.png')
+    plt.savefig('outputs/epoch_'+str(epoch)+'_batch_'+str(batch)+'.png')
     
     
     
