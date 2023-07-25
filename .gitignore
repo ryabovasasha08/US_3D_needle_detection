@@ -1,4 +1,5 @@
 data
 _pycache_
+.vscode
 utils.__pycache__
-models._pycache_
+models.__pycache__
