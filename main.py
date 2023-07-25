@@ -59,7 +59,8 @@ VALID_PERCENT = 0.2
 TEST_PERCENT = 0.2
 BATCH_TRAIN = 10
 BATCH_VALID = 10
-RESIZE_TO = 64
+BATCH_TEST = 10
+RESIZE_TO = 228 # original size - 235
 
 # %%
 from sklearn.model_selection import train_test_split
@@ -77,20 +78,20 @@ X_train.shape
 from utils.ImageDataset import ImageDataset, my_collate
 import torch
 
-train_dataset = ImageDataset(X_train,y_train, resizeTo=RESIZE_TO)
-valid_dataset = ImageDataset(X_valid,y_valid, resizeTo=RESIZE_TO)
+train_dataset = ImageDataset(X_train, y_train, resizeTo=RESIZE_TO)
+valid_dataset = ImageDataset(X_valid, y_valid, resizeTo=RESIZE_TO)
+test_dataset = ImageDataset(X_test, y_test, resizeTo=RESIZE_TO)
 train_dataloader = torch.utils.data.DataLoader(train_dataset,batch_size=BATCH_TRAIN,shuffle=True, collate_fn=my_collate)
 valid_dataloader = torch.utils.data.DataLoader(valid_dataset,batch_size=BATCH_VALID,shuffle=True, collate_fn=my_collate)
+test_dataloader = torch.utils.data.DataLoader(test_dataset,batch_size=BATCH_TEST,shuffle=True, collate_fn=my_collate)
 
-'''
 # %%
 # this cell is intended just to check dimensions:
-i = 0
 for sample_batched in train_dataloader:
-    i+=1
     print(sample_batched['image'].shape)
-    if (i>3):
-        break
+    break
+
+'''
 
 # %% [markdown]
 # ## convnet
@@ -271,7 +272,6 @@ trainer = Trainer(model=model,
 # %%
 # start training
 training_losses, validation_losses, lr_rates = trainer.run_trainer()
-
 '''
 
 # %% [markdown]
@@ -323,6 +323,7 @@ import numpy as np
 import torch
 from utils.display_utils import compare_input_target
 from utils.save_model_utils import save_model, save_plots, save_sample_mask
+from utils.accuracies import get_central_pixel_distance, get_pixel_accuracy_percent
 
 class TrainerUNET:
     def __init__(self,
@@ -351,6 +352,8 @@ class TrainerUNET:
 
         self.training_loss = []
         self.validation_loss = []
+        self.center_pixel_distances = []
+        self.pixelwise_accuracy = []
         self.learning_rate = []
 
     def run_trainer(self):
@@ -362,10 +365,11 @@ class TrainerUNET:
 
         progressbar = trange(self.epochs, desc='Progress')
         for i in progressbar:
-            print(f"[INFO]: Epoch {self.epoch} of {self.epochs}")
 
             """Epoch counter"""
             self.epoch += 1  # epoch counter
+            
+            print(f"[INFO]: Epoch {self.epoch} of {self.epochs}")
 
             """Training block"""
             self._train()
@@ -390,9 +394,9 @@ class TrainerUNET:
         # save the trained model weights for a final time
         save_model(self.epochs, self.model, self.optimizer, self.criterion)
         # save the loss and accuracy plots
-        save_plots(self.training_loss[-1], self.validation_loss[-1])
+        save_plots(self.training_loss[-1], self.validation_loss[-1], self.center_pixel_distances[-1], self.pixelwise_accuracy[-1])
         print('TRAINING COMPLETE')
-        return self.training_loss, self.validation_loss, self.learning_rate
+        return self.training_loss, self.validation_loss, self.learning_rate, self.pixelwise_accuracy, self.center_pixel_distances
 
     def _train(self):
 
@@ -403,11 +407,13 @@ class TrainerUNET:
 
         self.model.train()  # train mode
         train_losses = []  # accumulate the losses here
+        pixelwise_accuracy_within_batch = []
+        center_pixel_distance_within_batch = []
         batch_iter = tqdm(enumerate(self.training_DataLoader), 'Training', total=len(self.training_DataLoader),
                           leave=False)
 
         for i, sample_batched in batch_iter:
-            input, target = sample_batched['image'].to(self.device), sample_batched['mask'].to(self.device)  # send to device (GPU or CPU)
+            input, target, labels = sample_batched['image'].to(self.device), sample_batched['mask'].to(self.device), sample_batched['label'].to(self.device)  # send to device (GPU or CPU)
             self.optimizer.zero_grad()  # zerograd the parameters
             out = self.model(input)  # one forward pass
             # out = out[:, np.newaxis, :, :, :]
@@ -417,12 +423,16 @@ class TrainerUNET:
             loss = self.criterion(out, target)  # calculate loss
             loss_value = loss.item()
             train_losses.append(loss_value)
+            pixelwise_accuracy_within_batch.append(get_pixel_accuracy_percent(out, target))
+            center_pixel_distance_within_batch.append(get_central_pixel_distance(out, labels))
             loss.backward()  # one backward pass
             self.optimizer.step()  # update the parameters
 
             batch_iter.set_description(f'Training: (loss {loss_value:.4f})')  # update progressbar
 
         self.training_loss.append(np.mean(train_losses))
+        self.pixelwise_accuracy.append(np.mean(pixelwise_accuracy_within_batch))
+        self.center_pixel_distances.append(np.mean(center_pixel_distance_within_batch))
         self.learning_rate.append(self.optimizer.param_groups[0]['lr'])
 
         batch_iter.close()
@@ -467,10 +477,14 @@ trainer = TrainerUNET(model=model,
                   lr_scheduler=None,
                   epochs=EPOCHS,
                   epoch=0,
-                  notebook=False)
+                  notebook=True)
 
 # %%
 # start training
-training_losses, validation_losses, lr_rates = trainer.run_trainer()
-
+training_losses, validation_losses, lr_rates, pixelwise_accuracies, center_pixel_distances = trainer.run_trainer()
+print(training_losses)
+print(validation_losses)
+print(lr_rates)
+print(pixelwise_accuracies)
+print(center_pixel_distances)
 
