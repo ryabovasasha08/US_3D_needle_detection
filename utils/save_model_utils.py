@@ -72,42 +72,41 @@ def save_sample_mask(epoch, batch, inp_mask, target_mask, save = True):
         plt.savefig('outputs/epoch_'+str(epoch)+'_batch_'+str(batch)+'.png')
     else:
         plt.show()
+        
+    plt.close()
     
     
     
-def save_plots(train_loss, valid_loss, center_pixel_distances, pixelwise_accuracy):
+def save_plots(epochs, train_loss, valid_loss, center_pixel_distances, pixelwise_accuracy):
     """
     Function to save the loss plots to disk.
     """
     
     
     # accuracy plots
-    plt.figure(figsize=(10, 7))
-    plt.plot(pixelwise_accuracy, color='green', linestyle='-')
+    plt.figure()
+    plt.plot(range(0, epochs), pixelwise_accuracy, color='green', linestyle='-')
     plt.xlabel('Epochs')
     plt.ylabel('Pixelwise accuracy, %')
     plt.legend()
     plt.savefig('outputs/pixelwise_accuracy.png')
+    plt.close()
     
     
-    plt.figure(figsize=(10, 7))
-    plt.plot(center_pixel_distances, color='green', linestyle='-')
+    plt.figure()
+    plt.plot(range(0, epochs), center_pixel_distances, color='green', linestyle='-')
     plt.xlabel('Epochs')
     plt.ylabel('Distances between actual and predicted tip position, px')
     plt.legend()
     plt.savefig('outputs/center_pixel_distance.png')
+    plt.close()
     
     # loss plots
-    plt.figure(figsize=(10, 7))
-    plt.plot(
-        train_loss, color='green', linestyle='-', 
-        label='train loss'
-    )
-    plt.plot(
-        valid_loss, color='red', linestyle='-', 
-        label='validation loss'
-    )
+    plt.figure()
+    plt.plot(range(0, epochs), train_loss, color='green', linestyle='-', label='train loss')
+    plt.plot(range(0, epochs), valid_loss, color='red', linestyle='-', label='validation loss')
     plt.xlabel('Epochs')
     plt.ylabel('Loss')
     plt.legend()
     plt.savefig('outputs/loss.png')
+    plt.close()
