@@ -60,7 +60,8 @@ TEST_PERCENT = 0.2
 BATCH_TRAIN = 10
 BATCH_VALID = 10
 BATCH_TEST = 10
-RESIZE_TO = 228 # original size - 235
+# note: original size - 235; resizing to 200 + batch size 5 caused cuda out of memory
+RESIZE_TO = 128
 
 # %%
 from sklearn.model_selection import train_test_split
@@ -85,13 +86,12 @@ train_dataloader = torch.utils.data.DataLoader(train_dataset,batch_size=BATCH_TR
 valid_dataloader = torch.utils.data.DataLoader(valid_dataset,batch_size=BATCH_VALID,shuffle=True, collate_fn=my_collate)
 test_dataloader = torch.utils.data.DataLoader(test_dataset,batch_size=BATCH_TEST,shuffle=True, collate_fn=my_collate)
 
+'''
 # %%
 # this cell is intended just to check dimensions:
 for sample_batched in train_dataloader:
     print(sample_batched['image'].shape)
     break
-
-'''
 
 # %% [markdown]
 # ## convnet
@@ -477,14 +477,15 @@ trainer = TrainerUNET(model=model,
                   lr_scheduler=None,
                   epochs=EPOCHS,
                   epoch=0,
-                  notebook=True)
+                  notebook=False)
 
 # %%
 # start training
-training_losses, validation_losses, lr_rates, pixelwise_accuracies, center_pixel_distances = trainer.run_trainer()
-print(training_losses)
-print(validation_losses)
-print(lr_rates)
-print(pixelwise_accuracies)
-print(center_pixel_distances)
+training_losses, validation_losses, lr_rates, pixelwise_accuracy, center_pixel_distances = trainer.run_trainer()
+print(list(training_losses))
+print(list(validation_losses))
+print(list(lr_rates))
+print(list(pixelwise_accuracy))
+print(list(center_pixel_distances))
+
 
