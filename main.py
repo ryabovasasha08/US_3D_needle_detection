@@ -382,6 +382,9 @@ class TrainerUNET:
             print(f"Validation loss: {self.validation_loss[-1]:.3f}")
             # save the best model till now if we have the least loss in the current epoch
             save_best_model(self.validation_loss[-1], self.epoch, self.model, self.optimizer, self.criterion)
+            save_model(self.epochs, self.model, self.optimizer, self.criterion, 'outputs/'+'epoch_'+str(self.epoch)+'_model.pth')
+            save_plots(self.epoch, self.training_loss, self.validation_loss, self.center_pixel_distances, self.pixelwise_accuracy)
+
             print('-'*50)
             
             """Learning rate scheduler block"""
@@ -390,11 +393,11 @@ class TrainerUNET:
                     self.lr_scheduler.batch(self.validation_loss[i])  # learning rate scheduler step with validation loss
                 else:
                     self.lr_scheduler.batch()  # learning rate scheduler step
-                    
+        
         # save the trained model weights for a final time
-        save_model(self.epochs, self.model, self.optimizer, self.criterion)
+        save_model(self.epochs, self.model, self.optimizer, self.criterion, 'outputs/final_model.pth')
         # save the loss and accuracy plots
-        save_plots(self.training_loss[-1], self.validation_loss[-1], self.center_pixel_distances[-1], self.pixelwise_accuracy[-1])
+        save_plots(self.epochs, self.training_loss, self.validation_loss, self.center_pixel_distances, self.pixelwise_accuracy)
         print('TRAINING COMPLETE')
         return self.training_loss, self.validation_loss, self.learning_rate, self.pixelwise_accuracy, self.center_pixel_distances
 
@@ -487,5 +490,3 @@ print(list(validation_losses))
 print(list(lr_rates))
 print(list(pixelwise_accuracy))
 print(list(center_pixel_distances))
-
-

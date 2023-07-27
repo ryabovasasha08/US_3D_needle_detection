@@ -1,9 +1,11 @@
 import torch
 import matplotlib.pyplot as plt
+import numpy as np
 from utils.mask_utils import get_center_of_nonzero_4d_slice
 
 # https://debuggercafe.com/saving-and-loading-the-best-model-in-pytorch/
 
+# CHeck if it indeed saves the best model or not
 class SaveBestModel:
     """
     Class to save the best model while training. If the current epoch's 
@@ -32,7 +34,7 @@ class SaveBestModel:
 
 
 
-def save_model(epochs, model, optimizer, criterion):
+def save_model(epochs, model, optimizer, criterion, path):
     """
     Function to save the trained model to disk.
     """
@@ -42,9 +44,11 @@ def save_model(epochs, model, optimizer, criterion):
                 'model_state_dict': model.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict(),
                 'loss': criterion,
-                }, 'outputs/final_model.pth')
+                }, path)
 
 
+# if save = False, this function just shows sample mask instead of saving it
+# if save = True, this function just saves sample mask without displaying it
 def save_sample_mask(epoch, batch, inp_mask, target_mask, save = True):
     target_mask_np = target_mask.detach().cpu().numpy()
     inp_mask_np = inp_mask.detach().cpu().numpy()
@@ -76,37 +80,34 @@ def save_sample_mask(epoch, batch, inp_mask, target_mask, save = True):
     plt.close()
     
     
-    
+# Function to save the loss plots to disk.   
 def save_plots(epochs, train_loss, valid_loss, center_pixel_distances, pixelwise_accuracy):
-    """
-    Function to save the loss plots to disk.
-    """
-    
     
     # accuracy plots
     plt.figure()
-    plt.plot(range(0, epochs), pixelwise_accuracy, color='green', linestyle='-')
+    plt.plot(np.arange(0, epochs), pixelwise_accuracy, color='green', linestyle='-')
+    plt.title("Pixelwise accuracy")
     plt.xlabel('Epochs')
-    plt.ylabel('Pixelwise accuracy, %')
-    plt.legend()
-    plt.savefig('outputs/pixelwise_accuracy.png')
+    plt.ylabel('Accuracy, %')
+    plt.savefig('outputs/pixelwise_accuracy.jpg')
     plt.close()
     
     
     plt.figure()
-    plt.plot(range(0, epochs), center_pixel_distances, color='green', linestyle='-')
+    plt.plot(np.arange(0, epochs), center_pixel_distances, color='green', linestyle='-')
+    plt.title("Distances between between actual and predicted tip position")
     plt.xlabel('Epochs')
-    plt.ylabel('Distances between actual and predicted tip position, px')
-    plt.legend()
-    plt.savefig('outputs/center_pixel_distance.png')
+    plt.ylabel('Distance, px')
+    plt.savefig('outputs/center_pixel_distance.jpg')
     plt.close()
     
     # loss plots
     plt.figure()
-    plt.plot(range(0, epochs), train_loss, color='green', linestyle='-', label='train loss')
-    plt.plot(range(0, epochs), valid_loss, color='red', linestyle='-', label='validation loss')
+    plt.plot(np.arange(0, epochs), train_loss, color='green', linestyle='-', label='train loss')
+    plt.plot(np.arange(0, epochs), valid_loss, color='red', linestyle='-', label='validation loss')
+    plt.title("Losses over epochs")
     plt.xlabel('Epochs')
     plt.ylabel('Loss')
     plt.legend()
-    plt.savefig('outputs/loss.png')
+    plt.savefig('outputs/loss.jpg')
     plt.close()
