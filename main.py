@@ -321,7 +321,6 @@ model
 # %%
 import numpy as np
 import torch
-from utils.display_utils import compare_input_target
 from utils.save_model_utils import save_model, save_plots, save_sample_mask
 from utils.accuracies import get_central_pixel_distance, get_pixel_accuracy_percent
 
@@ -420,7 +419,6 @@ class TrainerUNET:
             self.optimizer.zero_grad()  # zerograd the parameters
             out = self.model(input)  # one forward pass
             # out = out[:, np.newaxis, :, :, :]
-            # compare_input_target(out[0], sample_batched['mask'][0])
             if i%30 == 0:
                 save_sample_mask(self.epoch, i, out[0], sample_batched['mask'][0])
             loss = self.criterion(out, target)  # calculate loss

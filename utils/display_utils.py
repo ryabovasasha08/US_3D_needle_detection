@@ -29,11 +29,24 @@ def show_sample(sample):
     plt.show()
     
 
-def compare_input_target(inp_mask, target_mask):
-    target_mask_np = target_mask.detach().cpu().numpy()
-    inp_mask_np = inp_mask.detach().cpu().numpy()
-    print("Number of non-zero pixels of input: "+str(np.count_nonzero(inp_mask_np)) + " vs "+ str(np.count_nonzero(target_mask_np)))
+def display_patches(patches_2d):
+    center_coord = int((patches_2d[0].shape[0]-1)/2)
+    
+    fig = plt.figure()
+    ax1 = fig.add_subplot(1, 3, 1)
+    plt.title("patch_yx")
+    plt.imshow(patches_2d[0], cmap='jet',  interpolation='none')
+    ax1.add_patch(patches.Circle((center_coord, center_coord), radius=0.5, color='white'))
+    
+    ax2 = fig.add_subplot(1, 3, 2)
+    plt.title("patch_xz")
+    plt.imshow(patches_2d[1], cmap='jet',  interpolation='none')
+    ax2.add_patch(patches.Circle((center_coord, center_coord), radius=0.5, color='white'))
 
-    pattern = (target_mask_np != 0) & (inp_mask_np != 0)
-    num_same_pixels = np.count_nonzero(pattern)
-    print("Number of non-zero pixels on correct positions: "+str(num_same_pixels))
+    ax3 = fig.add_subplot(1, 3, 3)
+    plt.title("patch_yz")
+    plt.imshow(patches_2d[2], cmap='jet',  interpolation='none')
+    ax3.add_patch(patches.Circle((center_coord, center_coord), radius=0.5, color='white'))
+
+    plt.axis('off')
+    plt.show()
