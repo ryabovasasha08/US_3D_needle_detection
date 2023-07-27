@@ -1,12 +1,13 @@
 import torch
 import numpy as np
 from utils.mask_utils import get_center_of_nonzero_4d_slice
+from utils.mask_utils import binarize_with_otsu
 
 def get_pixel_accuracy_percent(inputs, targets):
         
     # Flatten tensors 
     mask_flat = targets.view(-1)  
-    pred_flat = inputs.view(-1)
+    pred_flat = binarize_with_otsu(inputs).view(-1)
 
     # Calculate number of same predictions
     num_same = torch.sum(mask_flat == pred_flat)

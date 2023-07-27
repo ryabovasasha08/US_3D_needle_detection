@@ -6,7 +6,7 @@ import numpy as np
 
 def get_center_of_nonzero_4d_slice(tensor_4d):
     # Get nonzero indices
-    nz_indices = torch.nonzero(tensor_4d)
+    nz_indices = torch.nonzero(binarize_with_otsu(tensor_4d))
 
     # Find min and max indices 
     na, xmin, ymin, zmin = nz_indices.min(dim=0)[0].tolist()  
