@@ -2,28 +2,29 @@ import matplotlib.pyplot as plt
 from utils.type_reader import get_image_array
 import numpy as np
 import torch
+from matplotlib import patches
 
 
 def show_sample(sample):
-    plt.figure()
+    plt.figure(figsize=(12, 12))
     
     plt.subplot(1, 3, 1)
     plt.title("OYZ")
     x = sample['label'][0]
-    plt.imshow(sample['image'][0, x, :, :], cmap='seismic',  interpolation='none')
-    plt.imshow(sample['mask'][0, x, :, :], cmap='jet',  interpolation='none', alpha = 0.7)
+    plt.imshow(sample['image'][0, x, :, :], interpolation='none')
+    plt.imshow(sample['mask'][0, x, :, :], interpolation='none', alpha = 0.7)
     
     plt.subplot(1, 3, 2)
     plt.title("OXZ")
     y = sample['label'][1]
-    plt.imshow(sample['image'][0, :, y, :], cmap='seismic',  interpolation='none')
-    plt.imshow(sample['mask'][0, :, y, :], cmap='jet',  interpolation='none', alpha = 0.7)
+    plt.imshow(sample['image'][0, :, y, :], interpolation='none')
+    plt.imshow(sample['mask'][0, :, y, :], interpolation='none', alpha = 0.7)
     
     plt.subplot(1, 3, 3)
     plt.title("OXY")
     z = sample['label'][2]
-    plt.imshow(sample['image'][0, :, :, z], cmap='seismic',  interpolation='none')
-    plt.imshow(sample['mask'][0, :, :, z], cmap='jet',  interpolation='none', alpha = 0.7)
+    plt.imshow(sample['image'][0, :, :, z], interpolation='none')
+    plt.imshow(sample['mask'][0, :, :, z], interpolation='none', alpha = 0.7)
     
     plt.axis('off')
     plt.show()
