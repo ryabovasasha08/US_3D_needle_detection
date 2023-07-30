@@ -76,7 +76,7 @@ print(f"Total test images: {X_test.shape[0]}")
 X_train.shape
 
 # %%
-from utils.ImageDataset import ImageDataset, my_collate
+from utils.datasets import ImageDataset, my_collate
 import torch
 
 train_dataset = ImageDataset(X_train, y_train, resizeTo=RESIZE_TO)
