@@ -30,26 +30,6 @@ class FrameDiffDataset(Dataset):
 
     def __len__(self):
         return len(self.y)
-    
-    def getDatapointResized(self, input_image, mask, labels):     
-        us_tip_coords = labels.astype(float)
-        
-        #resize everything to 128*128*128 and normalize
-        ratio = self.resizeTo/input_image.shape[0]
-        us_tip_coords_resized = np.around(us_tip_coords*ratio).astype(int)
-        us_tip_coord_flattened = (self.resizeTo * self.resizeTo * us_tip_coords_resized[2]) + (self.resizeTo * us_tip_coords_resized[1]) + us_tip_coords_resized[0]
-        
-        input_image = ndimage.zoom(input_image, (ratio, ratio, ratio))[np.newaxis, :, :, :]
-        mean = np.mean(input_image)
-        std = np.std(input_image)
-        input_image = (input_image - mean) / std
-        
-        mask = ndimage.zoom(mask, (ratio, ratio, ratio))[np.newaxis, :, :, :]
-        mean = np.mean(mask)
-        std = np.std(mask)
-        mask = (mask - mean) / std
-
-        return input_image, mask, us_tip_coords_resized, us_tip_coord_flattened
 
     def __getitem__(self, idx):
         if torch.is_tensor(idx):
@@ -69,7 +49,7 @@ class FrameDiffDataset(Dataset):
         input_img = input_img_2-input_img_1
         mask = mask_2-mask_1
         
-        input_img_resized, mask_resized, label_resized, label_1D_resized = self.getDatapointResized(input_img, mask, self.y[idx])
+        input_img_resized, mask_resized, label_resized, label_1D_resized = getFrameDiffDatasetDatapointResized(input_img, mask, self.y[idx], self.resizeTo)
         
         sample = {'image': input_img_resized, 'mask': mask_resized, 'label': label_resized, 'label_1D': label_1D_resized}
 
@@ -85,54 +65,29 @@ class FrameDiffDataset(Dataset):
             return None
 
 
+def getFrameDiffDatasetDatapointResized(self, input_image, mask, labels, resizeTo):     
+    us_tip_coords = labels.astype(float)
+    
+    #resize everything to 128*128*128 and normalize
+    ratio = resizeTo/input_image.shape[0]
+    us_tip_coords_resized = np.around(us_tip_coords*ratio).astype(int)
+    us_tip_coord_flattened = (resizeTo * resizeTo * us_tip_coords_resized[2]) + (resizeTo * us_tip_coords_resized[1]) + us_tip_coords_resized[0]
+    
+    input_image = ndimage.zoom(input_image, (ratio, ratio, ratio))[np.newaxis, :, :, :]
+    mean = np.mean(input_image)
+    std = np.std(input_image)
+    input_image = (input_image - mean) / std
+    
+    mask = ndimage.zoom(mask, (ratio, ratio, ratio))[np.newaxis, :, :, :]
+    mean = np.mean(mask)
+    std = np.std(mask)
+    mask = (mask - mean) / std
 
+    return input_image, mask, us_tip_coords_resized, us_tip_coord_flattened
 
 
 class ImageDataset(Dataset):
     """US Images with a tip needle dataset."""
-    
-    # since resolution is 3px=mm and we have +-1mm error, default mask is 3px radius
-    # 135 is initial image size so also the default ResizeTo
-    def getDatapointResized(filename, frame_num, labels, mask_diam=6, resizeTo = 135): 
-        # create frame image based on frame number and filename
-        f = filename[:-4].split("/")[-1]
-        h5_file = h5py.File('../train/trainh5/'+f+'.hdf5', 'r')
-        input_image = h5_file['default'][frame_num]
-        h5_file.close()
-
-        '''
-        # create mask for the frame image
-        mask_image = np.zeros((input_image.shape))
-        mask_image[
-            np.around(labels[0]-mask_diam/2).astype(int):np.around(labels[0]+mask_diam/2).astype(int), 
-            np.around(labels[1]-mask_diam/2).astype(int):np.around(labels[1]+mask_diam/2).astype(int), 
-            np.around(labels[2]-mask_diam/2).astype(int):np.around(labels[2]+mask_diam/2).astype(int)
-        ] = 1
-        '''
-        
-        us_tip_coords = np.around(labels).astype(int)
-        
-        #resize everything to 128*128*128 and normalize
-        ratio = resizeTo/input_image.shape[0]
-        us_tip_coords_resized = np.around(us_tip_coords*ratio).astype(int)
-        us_tip_coord_flattened = (resizeTo * resizeTo * us_tip_coords_resized[2]) + (resizeTo * us_tip_coords_resized[1]) + us_tip_coords_resized[0]
-        
-        input_image = ndimage.zoom(input_image, (ratio, ratio, ratio))[np.newaxis, :, :, :]
-        mean = np.mean(input_image)
-        std = np.std(input_image)
-        input_image = (input_image - mean) / std
-        
-        mask_image = np.zeros((input_image.shape))
-        
-        mask_image[
-            0,
-            np.around(us_tip_coords_resized[0]-mask_diam/2).astype(int):np.around(us_tip_coords_resized[0]+mask_diam/2).astype(int), 
-            np.around(us_tip_coords_resized[1]-mask_diam/2).astype(int):np.around(us_tip_coords_resized[1]+mask_diam/2).astype(int), 
-            np.around(us_tip_coords_resized[2]-mask_diam/2).astype(int):np.around(us_tip_coords_resized[2]+mask_diam/2).astype(int)
-        ] = 1
-
-        return input_image, mask_image, us_tip_coords_resized, us_tip_coord_flattened
-
 
     def __init__(self, X, y, mask_diam=6, resizeTo=128, transform=None):
         """
@@ -154,7 +109,7 @@ class ImageDataset(Dataset):
             idx = idx.tolist()
 
         input_img, mask_img, us_tip_coords_resized, us_tip_coords_flattened_resized = \
-            self.getDatapointResized(self.X[idx, 0], int(float(self.X[idx, 1])), self.y[idx], mask_diam=self.mask_diam, resizeTo=self.resizeTo)
+            getImageDatasetDatapointResized(self.X[idx, 0], int(float(self.X[idx, 1])), self.y[idx], mask_diam=self.mask_diam, resizeTo=self.resizeTo)
 
         sample = {'image': input_img, 'mask': mask_img, 'label': us_tip_coords_resized, 'label_1D':us_tip_coords_flattened_resized}
 
@@ -168,6 +123,50 @@ class ImageDataset(Dataset):
         else:
             # return None to skip this sample
             return None
+        
+
+# since resolution is 3px=mm and we have +-1mm error, default mask is 3px radius
+# 135 is initial image size so also the default ResizeTo
+def getImageDatasetDatapointResized(filename, frame_num, labels, mask_diam=6, resizeTo = 135): 
+    # create frame image based on frame number and filename
+    f = filename[:-4].split("/")[-1]
+    h5_file = h5py.File('../train/trainh5/'+f+'.hdf5', 'r')
+    input_image = h5_file['default'][frame_num]
+    h5_file.close()
+
+    '''
+    # create mask for the frame image
+    mask_image = np.zeros((input_image.shape))
+    mask_image[
+        np.around(labels[0]-mask_diam/2).astype(int):np.around(labels[0]+mask_diam/2).astype(int), 
+        np.around(labels[1]-mask_diam/2).astype(int):np.around(labels[1]+mask_diam/2).astype(int), 
+        np.around(labels[2]-mask_diam/2).astype(int):np.around(labels[2]+mask_diam/2).astype(int)
+    ] = 1
+    '''
+    
+    us_tip_coords = np.around(labels).astype(int)
+    
+    #resize everything to 128*128*128 and normalize
+    ratio = resizeTo/input_image.shape[0]
+    us_tip_coords_resized = np.around(us_tip_coords*ratio).astype(int)
+    us_tip_coord_flattened = (resizeTo * resizeTo * us_tip_coords_resized[2]) + (resizeTo * us_tip_coords_resized[1]) + us_tip_coords_resized[0]
+    
+    input_image = ndimage.zoom(input_image, (ratio, ratio, ratio))[np.newaxis, :, :, :]
+    mean = np.mean(input_image)
+    std = np.std(input_image)
+    input_image = (input_image - mean) / std
+    
+    mask_image = np.zeros((input_image.shape))
+    
+    mask_image[
+        0,
+        np.around(us_tip_coords_resized[0]-mask_diam/2).astype(int):np.around(us_tip_coords_resized[0]+mask_diam/2).astype(int), 
+        np.around(us_tip_coords_resized[1]-mask_diam/2).astype(int):np.around(us_tip_coords_resized[1]+mask_diam/2).astype(int), 
+        np.around(us_tip_coords_resized[2]-mask_diam/2).astype(int):np.around(us_tip_coords_resized[2]+mask_diam/2).astype(int)
+    ] = 1
+
+    return input_image, mask_image, us_tip_coords_resized, us_tip_coord_flattened
+
         
 # custom collate function to filter out None samples
 def my_collate(batch):

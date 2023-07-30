@@ -26,3 +26,34 @@ class IoULossModified(nn.Module):
         IoU = (intersection + smooth)/(union + smooth)
         
         return 1 - IoU
+    
+    
+# PyTorch
+# This implements the complete IoU loss as described in the paper "Distance-IoU Loss: Faster and Better Learning for Bounding Box Regression" by Zheng et al. (AAAI 2020).
+# It computes the standard IoU between predicted and target boxes, then penalizes predictions that enclose target boxes by a larger area.
+# We will use binarized sigmoid predictions
+class CompleteIoULoss(nn.Module):
+    def __init__(self, weight=None, size_average=True):
+        super(CompleteIoULoss, self).__init__()
+
+    def forward(self, inputs, targets, smooth=1):
+        
+        inputs = (torch.sigmoid(inputs) > 0.5).float()
+        
+        #flatten label and prediction tensors
+        inputs = inputs.view(-1)
+        targets = targets.view(-1)
+        
+        #intersection is equivalent to True Positive count
+        #union is the mutually inclusive area of all labels & predictions 
+        intersection = (inputs * targets).sum()
+        total = (inputs + targets).sum()
+        union = total - intersection 
+        
+        IoU = (intersection + smooth)/(union + smooth)
+        
+        enclosed_mask = (inputs + targets == 2).float()
+        enclose_area = enclosed_mask.sum()
+        ciou = IoU - 1/enclose_area * (enclose_area - union)
+                
+        return 1 - ciou
