@@ -13,9 +13,10 @@ class SaveBestModel:
     model state.
     """
     def __init__(
-        self, best_valid_loss=float('inf')
+        self, path, best_valid_loss=float('inf')
     ):
         self.best_valid_loss = best_valid_loss
+        self.path = path
         
     def __call__(
         self, current_valid_loss, 
@@ -30,7 +31,7 @@ class SaveBestModel:
                 'model_state_dict': model.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict(),
                 'loss': criterion,
-                }, 'outputs/best_model.pth')
+                }, self.path)
 
 
 
@@ -53,7 +54,7 @@ def save_model(epochs, model, optimizer, criterion, train_loss, valid_loss, accu
 
 # if save = False, this function just shows sample mask instead of saving it
 # if save = True, this function just saves sample mask without displaying it
-def save_sample_mask(epoch, batch, inp_mask, target_mask, save = True):
+def save_sample_mask(epoch, batch, inp_mask, target_mask, path = "", save = True):
     target_mask_np = target_mask.detach().cpu().numpy()
     inp_mask_np = inp_mask.detach().cpu().numpy()
     
@@ -63,21 +64,21 @@ def save_sample_mask(epoch, batch, inp_mask, target_mask, save = True):
 
     plt.subplot(1, 3, 1)
     plt.title("OYZ")
-    plt.imshow(target_mask_np[0, x, :, :], cmap='gray',  interpolation='none')
-    plt.imshow(inp_mask_np[0, x, :, :], cmap='jet',  interpolation='none', alpha = 0.7)
+    plt.imshow(target_mask_np[0, x, :, :], interpolation='none')
+    plt.imshow(inp_mask_np[0, x, :, :],  interpolation='none', alpha = 0.7)
     plt.subplot(1, 3, 2)
     plt.title("OXZ")
-    plt.imshow(target_mask_np[0, :, y, :], cmap='gray',  interpolation='none')
-    plt.imshow(inp_mask_np[0, :, y, :], cmap='jet',  interpolation='none', alpha = 0.7)
+    plt.imshow(target_mask_np[0, :, y, :], interpolation='none')
+    plt.imshow(inp_mask_np[0, :, y, :], interpolation='none', alpha = 0.7)
     plt.subplot(1, 3, 3)
     plt.title("OXY")
-    plt.imshow(target_mask_np[0, :, :, z], cmap='gray',  interpolation='none')
-    plt.imshow(inp_mask_np[0, :, :, z], cmap='jet',  interpolation='none', alpha = 0.7)
+    plt.imshow(target_mask_np[0, :, :, z], interpolation='none')
+    plt.imshow(inp_mask_np[0, :, :, z], interpolation='none', alpha = 0.7)
     
     plt.axis('off')
     
     if (save):
-        plt.savefig('outputs/epoch_'+str(epoch)+'_batch_'+str(batch)+'.png')
+        plt.savefig(path+'/epoch_'+str(epoch)+'_batch_'+str(batch)+'.png')
     else:
         plt.show()
         
@@ -85,7 +86,7 @@ def save_sample_mask(epoch, batch, inp_mask, target_mask, save = True):
     
     
 # Function to save the loss plots to disk.   
-def save_plots(epochs, train_loss, valid_loss, center_pixel_distances, pixelwise_accuracy):
+def save_plots(epochs, train_loss, valid_loss, center_pixel_distances, pixelwise_accuracy, path):
     
     # accuracy plots
     plt.figure()
@@ -93,7 +94,7 @@ def save_plots(epochs, train_loss, valid_loss, center_pixel_distances, pixelwise
     plt.title("Pixelwise accuracy")
     plt.xlabel('Epochs')
     plt.ylabel('Accuracy, %')
-    plt.savefig('outputs/pixelwise_accuracy.jpg')
+    plt.savefig(path+'/pixelwise_accuracy.jpg')
     plt.close()
     
     
@@ -102,7 +103,7 @@ def save_plots(epochs, train_loss, valid_loss, center_pixel_distances, pixelwise
     plt.title("Distances between between actual and predicted tip position")
     plt.xlabel('Epochs')
     plt.ylabel('Distance, px')
-    plt.savefig('outputs/center_pixel_distance.jpg')
+    plt.savefig(path+'/center_pixel_distance.jpg')
     plt.close()
     
     # loss plots
@@ -113,5 +114,5 @@ def save_plots(epochs, train_loss, valid_loss, center_pixel_distances, pixelwise
     plt.xlabel('Epochs')
     plt.ylabel('Loss')
     plt.legend()
-    plt.savefig('outputs/loss.jpg')
+    plt.savefig(path+'/loss.jpg')
     plt.close()
