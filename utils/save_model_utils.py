@@ -34,7 +34,7 @@ class SaveBestModel:
 
 
 
-def save_model(epochs, model, optimizer, criterion, path):
+def save_model(epochs, model, optimizer, criterion, train_loss, valid_loss, accuracy, center_distance, path):
     """
     Function to save the trained model to disk.
     """
@@ -44,6 +44,10 @@ def save_model(epochs, model, optimizer, criterion, path):
                 'model_state_dict': model.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict(),
                 'loss': criterion,
+                'train_loss':train_loss,
+                'valid_loss':valid_loss,
+                'accuracy':accuracy,
+                'center_distance':center_distance
                 }, path)
 
 

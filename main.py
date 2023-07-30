@@ -302,6 +302,7 @@ device
 
 # %%
 import torch.nn as nn
+import torch
 from torch import optim
 from torch.utils.data import DataLoader, random_split
 from tqdm import tqdm
@@ -309,11 +310,16 @@ from models.unet import UNet
 from utils.losses import IoULossModified
 from utils.save_model_utils import SaveBestModel
 
+state_epoch_10 = torch.load('outputs_side_128_epochs_0_20/epoch_10_model.pth')
 model = UNet(out_channels = 1, n_blocks=UNET_DEPTH, start_filts = UNET_START_FILTERS)
 optimizer = optim.Adam(model.parameters()) #optim.RMSprop(model.parameters(),lr=INIT_LR, weight_decay=WEIGHT_DECAY, momentum=MOMENTUM, foreach=True)
 # scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', patience=5)  # goal: maximize Dice score
 criterion = IoULossModified()
 save_best_model = SaveBestModel()
+
+model.to(device).load_state_dict(state_epoch_10['model_state_dict'])
+optimizer.load_state_dict(state_epoch_10['optimizer_state_dict'])
+
 
 # %%
 model
@@ -338,7 +344,7 @@ class TrainerUNET:
                  notebook: bool = False
                  ):
 
-        self.model = model.to(device)
+        self.model = model #.to(device)
         self.criterion = criterion
         self.optimizer = optimizer
         self.lr_scheduler = lr_scheduler
@@ -348,12 +354,12 @@ class TrainerUNET:
         self.epochs = epochs
         self.epoch = epoch
         self.notebook = notebook
-
-        self.training_loss = []
-        self.validation_loss = []
-        self.center_pixel_distances = []
-        self.pixelwise_accuracy = []
-        self.learning_rate = []
+        
+        self.training_loss = [0.9998183673269411, 0.9995447610612779, 0.9938582162849349, 0.8867336900026537, 0.727552473181663, 0.6460004855977761, 0.588886039147471, 0.5332897262623426, 0.48964204485109036, 0.44247299667496137, ]
+        self.validation_loss = [0.999730334129611, 0.9990745835850494, 0.9758845159610496, 0.78341876426944, 0.6839649770860814, 0.6144633413794133, 0.5646047215175249, 0.5153148632301333, 0.46675198641713767, 0.4216347134854295]
+        self.center_pixel_distances = [16.2701426312437, 16.225993270614165, 16.205449876988418, 16.23642952391851, 16.21048394239021, 16.235858418436884, 16.248649459499504, 16.22784462344379, 16.261796878264203, 16.199624936590975]
+        self.pixelwise_accuracy = [54.857849147380655, 78.89785577713603, 87.57358659321153, 83.93779696739266, 66.72672019668029, 43.568368749299516, 22.099489928551122, 15.702024382919493, 12.93649077940155, 9.484215684130158]
+        self.learning_rate = [0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001]
 
     def run_trainer(self):
 
@@ -362,7 +368,7 @@ class TrainerUNET:
         else:
             from tqdm import tqdm, trange
 
-        progressbar = trange(self.epochs, desc='Progress')
+        progressbar = trange(self.epoch, self.epochs, desc='Progress')
         for i in progressbar:
 
             """Epoch counter"""
@@ -381,7 +387,7 @@ class TrainerUNET:
             print(f"Validation loss: {self.validation_loss[-1]:.3f}")
             # save the best model till now if we have the least loss in the current epoch
             save_best_model(self.validation_loss[-1], self.epoch, self.model, self.optimizer, self.criterion)
-            save_model(self.epochs, self.model, self.optimizer, self.criterion, 'outputs/'+'epoch_'+str(self.epoch)+'_model.pth')
+            save_model(self.epochs, self.model, self.optimizer, self.criterion, self.training_loss[-1], self.validation_loss[-1], self.pixelwise_accuracy[-1], self.center_pixel_distances[-1], 'outputs/'+'epoch_'+str(self.epoch)+'_model.pth')
             save_plots(self.epoch, self.training_loss, self.validation_loss, self.center_pixel_distances, self.pixelwise_accuracy)
 
             print('-'*50)
@@ -394,7 +400,7 @@ class TrainerUNET:
                     self.lr_scheduler.batch()  # learning rate scheduler step
         
         # save the trained model weights for a final time
-        save_model(self.epochs, self.model, self.optimizer, self.criterion, 'outputs/final_model.pth')
+        save_model(self.epochs, self.model, self.optimizer, self.criterion, self.training_loss[-1], self.validation_loss[-1], self.pixelwise_accuracy[-1], self.center_pixel_distances[-1], 'outputs/final_model.pth')
         # save the loss and accuracy plots
         save_plots(self.epochs, self.training_loss, self.validation_loss, self.center_pixel_distances, self.pixelwise_accuracy)
         print('TRAINING COMPLETE')
@@ -476,8 +482,8 @@ trainer = TrainerUNET(model=model,
                   training_DataLoader=train_dataloader,
                   validation_DataLoader=valid_dataloader,
                   lr_scheduler=None,
-                  epochs=EPOCHS,
-                  epoch=0,
+                  epochs=50,
+                  epoch=10,
                   notebook=False)
 
 # %%
