@@ -5,3 +5,4 @@ utils.__pycache__
 utils._pycache_
 models.__pycache__
 models._pycache_
+*/__pycache__/*
