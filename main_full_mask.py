@@ -76,12 +76,12 @@ print(f"Total test images: {X_test.shape[0]}")
 X_train.shape
 
 # %%
-from utils.datasets import ImageDataset, my_collate
+from utils.datasets import FullMaskDataset, my_collate
 import torch
 
-train_dataset = ImageDataset(X_train, y_train, resizeTo=RESIZE_TO)
-valid_dataset = ImageDataset(X_valid, y_valid, resizeTo=RESIZE_TO)
-test_dataset = ImageDataset(X_test, y_test, resizeTo=RESIZE_TO)
+train_dataset = FullMaskDataset(X_train, y_train, cropTo=RESIZE_TO)
+valid_dataset = FullMaskDataset(X_valid, y_valid, cropTo=RESIZE_TO)
+test_dataset = FullMaskDataset(X_test, y_test, cropTo=RESIZE_TO)
 train_dataloader = torch.utils.data.DataLoader(train_dataset,batch_size=BATCH_TRAIN,shuffle=True, collate_fn=my_collate)
 valid_dataloader = torch.utils.data.DataLoader(valid_dataset,batch_size=BATCH_VALID,shuffle=True, collate_fn=my_collate)
 test_dataloader = torch.utils.data.DataLoader(test_dataset,batch_size=BATCH_TEST,shuffle=True, collate_fn=my_collate)
@@ -93,16 +93,19 @@ test_dataloader = torch.utils.data.DataLoader(test_dataset,batch_size=BATCH_TEST
 # %%
 # init number of epochs to train for, and the
 # batch size of train and validation sets
-EPOCHS = 10
+EPOCHS = 50
 UNET_DEPTH = 4 # size of the image should divide by this number
 UNET_START_FILTERS = 3
 
 #For LR scheduler
-INIT_LR = 0.001
+INIT_LR = 0.01
 WEIGHT_DECAY = 1e-8
 MOMENTUM = 0.999
 
-PATH_DIR = 'outputs_ciou'
+# define threshold to filter weak predictions
+THRESHOLD = 0.5
+
+PATH_DIR = 'outputs_full_mask'
 
 # %%
 import torch
@@ -118,25 +121,24 @@ from torch import optim
 from torch.utils.data import DataLoader, random_split
 from tqdm import tqdm
 from models.unet import UNet
-from utils.losses import CompleteIoULoss
+from utils.losses import IoULoss
 from utils.save_model_utils import SaveBestModel
 
+# state_epoch_20 = torch.load('outputs_side_128_epochs_0_50/epoch_20_model.pth')
 model = UNet(out_channels = 1, n_blocks=UNET_DEPTH, start_filts = UNET_START_FILTERS)
-optimizer = optim.Adam(model.parameters()) #optim.RMSprop(model.parameters(),lr=INIT_LR, weight_decay=WEIGHT_DECAY, momentum=MOMENTUM, foreach=True)
-# scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', patience=5)  # goal: maximize Dice score
-criterion = CompleteIoULoss()
+optimizer = optim.Adam(model.parameters(), lr = INIT_LR)# optim.RMSprop(model.parameters(),lr=INIT_LR, weight_decay=WEIGHT_DECAY, momentum=MOMENTUM, foreach=True)
+scheduler = None # optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=1)  # goal: minimize loss
+criterion = IoULoss()
 save_best_model = SaveBestModel(PATH_DIR)
+
+#model.to(device).load_state_dict(state_epoch_20['model_state_dict'])
+#optimizer.load_state_dict(state_epoch_20['optimizer_state_dict'])
 
 
 # %%
 model
 
 # %%
-import numpy as np
-import torch
-from utils.save_model_utils import save_model, save_plots, save_sample_mask
-from utils.accuracies import get_central_pixel_distance, get_pixel_accuracy_percent
-
 import numpy as np
 import torch
 from utils.save_model_utils import save_model, save_plots, save_sample_mask
@@ -154,7 +156,7 @@ class TrainerUNET:
                  epochs: int = 100,
                  epoch: int = 0,
                  notebook: bool = False,
-                 path_dir=''
+                 path_dir = ''
                  ):
 
         self.model = model.to(device)
@@ -168,13 +170,13 @@ class TrainerUNET:
         self.epoch = epoch
         self.notebook = notebook
         self.path_dir = path_dir
-
+        
         self.training_loss = []
         self.validation_loss = []
         self.center_pixel_distances = []
         self.pixelwise_accuracy = []
         self.learning_rate = []
-
+        
     def run_trainer(self):
 
         if self.notebook:
@@ -182,7 +184,7 @@ class TrainerUNET:
         else:
             from tqdm import tqdm, trange
 
-        progressbar = trange(self.epochs, desc='Progress')
+        progressbar = trange(self.epoch, self.epochs, desc='Progress')
         for i in progressbar:
 
             """Epoch counter"""
@@ -201,8 +203,8 @@ class TrainerUNET:
             print(f"Validation loss: {self.validation_loss[-1]:.3f}")
             # save the best model till now if we have the least loss in the current epoch
             save_best_model(self.validation_loss[-1], self.epoch, self.model, self.optimizer, self.criterion)
-            save_model(self.epochs, self.model, self.optimizer, self.criterion, self.path_dir+'/epoch_'+str(self.epoch)+'_model.pth')
-            save_plots(self.epochs, self.training_loss, self.validation_loss, self.center_pixel_distances, self.pixelwise_accuracy, self.path_dir)
+            save_model(self.epochs, self.model, self.optimizer, self.criterion, self.training_loss[-1], self.validation_loss[-1], self.pixelwise_accuracy[-1], self.center_pixel_distances[-1], self.path_dir+'/epoch_'+str(self.epoch)+'_model.pth')
+            save_plots(self.epoch, self.training_loss, self.validation_loss, self.center_pixel_distances, self.pixelwise_accuracy, self.path_dir)
 
             print('-'*50)
             
@@ -214,7 +216,7 @@ class TrainerUNET:
                     self.lr_scheduler.batch()  # learning rate scheduler step
         
         # save the trained model weights for a final time
-        save_model(self.epochs, self.model, self.optimizer, self.criterion, self.path_dir+'/final_model.pth')
+        save_model(self.epochs, self.model, self.optimizer, self.criterion, self.training_loss[-1], self.validation_loss[-1], self.pixelwise_accuracy[-1], self.center_pixel_distances[-1], self.path_dir+'/final_model.pth')
         # save the loss and accuracy plots
         save_plots(self.epochs, self.training_loss, self.validation_loss, self.center_pixel_distances, self.pixelwise_accuracy, self.path_dir)
         print('TRAINING COMPLETE')
@@ -236,18 +238,22 @@ class TrainerUNET:
 
         for i, sample_batched in batch_iter:
             input, target, labels = sample_batched['image'].to(self.device), sample_batched['mask'].to(self.device), sample_batched['label'].to(self.device)  # send to device (GPU or CPU)
+            target.requires_grad_(True)
             self.optimizer.zero_grad()  # zerograd the parameters
             out = self.model(input)  # one forward pass
+            out.requires_grad_(True)
             # out = out[:, np.newaxis, :, :, :]
             if i%30 == 0:
-                save_sample_mask(self.epoch, i, out[0], sample_batched['mask'][0], self.path_dir)
+                save_sample_mask(self.epoch, i, out[0], sample_batched['mask'][0], path = self.path_dir)        
+        
             loss = self.criterion(out, target)  # calculate loss
             loss_value = loss.item()
+            loss.backward()  # one backward pass
+            self.optimizer.step()  # update the parameters
+            
             train_losses.append(loss_value)
             pixelwise_accuracy_within_batch.append(get_pixel_accuracy_percent(out, target))
             center_pixel_distance_within_batch.append(get_central_pixel_distance(out, labels))
-            loss.backward()  # one backward pass
-            self.optimizer.step()  # update the parameters
 
             batch_iter.set_description(f'Training: (loss {loss_value:.4f})')  # update progressbar
 
@@ -295,11 +301,11 @@ trainer = TrainerUNET(model=model,
                   optimizer=optimizer,
                   training_DataLoader=train_dataloader,
                   validation_DataLoader=valid_dataloader,
-                  lr_scheduler=None,
-                  epochs=50,
+                  lr_scheduler=scheduler,
+                  epochs=EPOCHS,
                   epoch=0,
-                  path_dir=PATH_DIR,
-                  notebook=False)
+                  notebook=False,
+                  path_dir = PATH_DIR)
 
 # %%
 # start training
@@ -309,3 +315,5 @@ print(list(validation_losses))
 print(list(lr_rates))
 print(list(pixelwise_accuracy))
 print(list(center_pixel_distances))
+
+# %%
