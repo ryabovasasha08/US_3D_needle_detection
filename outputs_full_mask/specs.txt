@@ -1,0 +1,4 @@
+epochs: 50
+dataset: FullMaskDataset (full mask of needle, transforms: crop or resize, rotate(90, 180, 270), flipx, flipz, normalize)
+loss: iou 
+size of images: 128*128*128

@@ -238,13 +238,12 @@ class TrainerUNET:
 
         for i, sample_batched in batch_iter:
             input, target, labels = sample_batched['image'].to(self.device), sample_batched['mask'].to(self.device), sample_batched['label'].to(self.device)  # send to device (GPU or CPU)
-            target.requires_grad_(True)
             self.optimizer.zero_grad()  # zerograd the parameters
             out = self.model(input)  # one forward pass
-            out.requires_grad_(True)
+            target.requires_grad_(True)
             # out = out[:, np.newaxis, :, :, :]
             if i%30 == 0:
-                save_sample_mask(self.epoch, i, out[0], sample_batched['mask'][0], path = self.path_dir)        
+                save_sample_mask(self.epoch, i, input[0], out[0], sample_batched['mask'][0], path = self.path_dir)        
         
             loss = self.criterion(out, target)  # calculate loss
             loss_value = loss.item()
