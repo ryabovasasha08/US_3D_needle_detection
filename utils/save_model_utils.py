@@ -54,26 +54,44 @@ def save_model(epochs, model, optimizer, criterion, train_loss, valid_loss, accu
 
 # if save = False, this function just shows sample mask instead of saving it
 # if save = True, this function just saves sample mask without displaying it
-def save_sample_mask(epoch, batch, inp_mask, target_mask, path = "", save = True):
+def save_sample_mask(epoch, batch, image, inp_mask, target_mask, path = "", save = True):
     target_mask_np = target_mask.detach().cpu().numpy()
     inp_mask_np = inp_mask.detach().cpu().numpy()
+    image_np = image.detach().cpu().numpy()
     
-    plt.figure()
+    fig, axes = plt.subplots(3, 3, figsize=(12,12))
+
     # Get nonzero indices 
     x, y, z = get_center_of_nonzero_4d_slice(target_mask)
 
-    plt.subplot(1, 3, 1)
-    plt.title("OYZ")
-    plt.imshow(target_mask_np[0, x, :, :], interpolation='none')
-    plt.imshow(inp_mask_np[0, x, :, :],  interpolation='none', alpha = 0.7)
-    plt.subplot(1, 3, 2)
-    plt.title("OXZ")
-    plt.imshow(target_mask_np[0, :, y, :], interpolation='none')
-    plt.imshow(inp_mask_np[0, :, y, :], interpolation='none', alpha = 0.7)
-    plt.subplot(1, 3, 3)
-    plt.title("OXY")
-    plt.imshow(target_mask_np[0, :, :, z], interpolation='none')
-    plt.imshow(inp_mask_np[0, :, :, z], interpolation='none', alpha = 0.7)
+    axes[0, 2].imshow(inp_mask_np[0, x, :, :], cmap = 'gray', interpolation='none')
+    axes[0, 2].set_title("OYZ - pred")
+    
+    axes[0, 1].imshow(target_mask_np[0, x, :, :], cmap = 'gray', interpolation='none')
+    axes[0, 1].set_title("OYZ - gt")
+    
+    axes[0, 0].imshow(image_np[0, x, :, :], cmap = 'gray', interpolation='none')
+    axes[0, 0].set_title("OYZ - image")
+    
+    axes[1, 2].imshow(inp_mask_np[0, :, y, :], cmap = 'gray', interpolation='none')
+    axes[1, 2].set_title("OXZ - pred")
+    
+    axes[1, 1].imshow(target_mask_np[0, :, y, :], cmap = 'gray', interpolation='none')
+    axes[1, 1].set_title("OXZ - gt")
+    
+    axes[1, 0].imshow(image_np[0, :, y, :], cmap = 'gray', interpolation='none')
+    axes[1, 0].set_title("OXZ - image")
+    
+    axes[2, 2].imshow(inp_mask_np[0, :, :, z], cmap = 'gray', interpolation='none')
+    axes[2, 2].set_title("OXY - pred")
+    
+    axes[2, 1].imshow(target_mask_np[0, :, :, z], cmap = 'gray', interpolation='none')
+    axes[2, 1].set_title("OXY - gt")
+    
+    axes[2, 0].imshow(image_np[0, :, :, z], cmap = 'gray', interpolation='none')
+    axes[2, 0].set_title("OXY - image")
+    
+    fig.tight_layout()
     
     plt.axis('off')
     
