@@ -149,6 +149,10 @@ def cropOrResizeTransformWithLabel(image, mask, tip_coords, cropTo):
         image = ndimage.zoom(image, (ratio, ratio, ratio))
         mask = ndimage.zoom(mask, (ratio, ratio, ratio))
         
+        mean = np.mean(image)
+        std = np.std(image)
+        image = (image - mean) / std
+        
     return image, mask, tip_coords
 
 
