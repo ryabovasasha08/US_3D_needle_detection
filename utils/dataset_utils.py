@@ -40,7 +40,7 @@ def getFrameDiffDatasetDatapointResized(self, input_image, mask, labels, resizeT
 def getImageDatasetDatapointResized(filename, frame_num, labels, mask_diam=6, resizeTo = 135): 
     # create frame image based on frame number and filename
     f = filename[:-4].split("/")[-1]
-    h5_file = h5py.File('../train/trainh5/'+f+'.hdf5', 'r')
+    h5_file = h5py.File('../train/trainh5_chunked/'+f+'.hdf5', 'r')
     input_image = h5_file['default'][frame_num]
     h5_file.close()
 

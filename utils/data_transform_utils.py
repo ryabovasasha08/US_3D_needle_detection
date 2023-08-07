@@ -13,7 +13,8 @@ def store_all_data_as_h5(filenames_array):
     for filename in tqdm(filenames_array):
         f = filename[:-4].split("/")[-1]
         new_file = h5py.File('../train/trainh5/'+f+'.hdf5', 'w')
-        new_file.create_dataset("default", data=np.transpose(get_image_array(filename),(3, 0, 1, 2)))
+        imageData = np.transpose(get_image_array(filename),(3, 0, 1, 2))
+        new_file.create_dataset("default", data=imageData, chunks=(1, imageData.shape[1], imageData.shape[2], imageData.shape[3]), dtype='f4')
         new_file.close()
         
 
@@ -30,7 +31,9 @@ def create_and_store_needle_masks_as_h5(filenames_array):
         info = mha_read_header(filename)
         labels = get_labels(f, info)
         needle_mask_sequence = get_needle_mask_of_frame_sequence(sequence_4d, labels)
-        new_file.create_dataset("default", data=np.transpose(needle_mask_sequence,(3, 0, 1, 2)))
+        needle_mask_sequence_frame_first = np.transpose(needle_mask_sequence,(3, 0, 1, 2))
+        img_shape = needle_mask_sequence_frame_first.shape
+        new_file.create_dataset("default", data=needle_mask_sequence_frame_first, chunks=(1, img_shape[1], img_shape[2], img_shape[3]))
         new_file.close()
         
         

@@ -129,7 +129,7 @@ class FullMaskDataset(Dataset):
             
         # create frame image based on frame number and filename
         f = self.X[idx, 0][:-4].split("/")[-1]
-        h5_file = h5py.File('../train/trainh5/'+f+'.hdf5', 'r')
+        h5_file = h5py.File('../train/trainh5_chunked/'+f+'.hdf5', 'r')
         img = h5_file['default'][int(float(self.X[idx, 1]))]
         h5_file.close()
         h5_mask_file = h5py.File('../train/needle_masks_h5/'+f+'.hdf5', 'r')
