@@ -20,7 +20,7 @@ class FrameDiffDataset(Dataset):
 
     # passed X must contain two pairs of frames of the same frame sequence with difference of frame_diff
     # passed y must contain needle tip coords for the second of the needle frames
-    def __init__(self, X, y, resizeTo=128, transform=None):
+    def __init__(self, X, y):
         """
         Arguments:
             transform (callable, optional): Optional transform to be applied
@@ -28,8 +28,6 @@ class FrameDiffDataset(Dataset):
         """
         self.X = X
         self.y = y
-        self.resizeTo = resizeTo
-        self.transform = transform
 
     def __len__(self):
         return len(self.y)
@@ -39,34 +37,99 @@ class FrameDiffDataset(Dataset):
             idx = idx.tolist()
 
         f = self.X[idx][0][:-4].split("/")[-1]
-        print(f)
-        h5_img_file = h5py.File('../train/trainh5/'+f+'.hdf5', 'r')
-        h5_mask_file = h5py.File('../train/needle_masks_h5/'+f+'.hdf5', 'r')
-        input_img_1 = h5_img_file['default'][int(float(self.X[idx, 1]))]
-        mask_1 = h5_mask_file['default'][int(float(self.X[idx, 1]))]
-        input_img_2 = h5_img_file['default'][int(float(self.X[idx, 2]))]
-        mask_2 = h5_mask_file['default'][int(float(self.X[idx, 2]))]
-        h5_img_file.close()
-        h5_mask_file.close()
+        h5_file = h5py.File('../train/resized_train/'+f+'.hdf5', 'r')
+        
+        
+        img_1 = h5_file["img"+"_"+self.X[idx][1]+"_"+str(10)][()]
+        img_2 = h5_file["img"+"_"+self.X[idx][2]+"_"+str(10)][()]
+        mask_1 = h5_file["mask"+"_"+self.X[idx][1]+"_"+str(10)][()]
+        mask_2 = h5_file["mask"+"_"+self.X[idx][2]+"_"+str(10)][()]
+        tip_coords = h5_file["labels"+"_"+self.X[idx][2]+"_"+str(10)][()]
+        tip_coords_original = h5_file["labels_original"][int(float(self.X[idx][2])), :]
+        
+        h5_file.close
     
-        input_img = input_img_2-input_img_1
+        img = img_2-img_1
         mask = mask_2-mask_1
         
-        input_img_resized, mask_resized, label_resized, label_1D_resized = getFrameDiffDatasetDatapointResized(input_img, mask, self.y[idx], self.resizeTo)
+        img, mask, coords = transformWithLabel(img, mask, tip_coords)
         
-        sample = {'image': input_img_resized, 'mask': mask_resized, 'label': label_resized, 'label_1D': label_1D_resized}
-
-        # TODO: use transforms: https://pytorch.org/tutorials/beginner/data_loading_tutorial.html
-        if self.transform:
-            sample = self.transform(sample)
+        sample = {'image': img, 'mask': mask, 'label': coords, 'label_original': tip_coords_original}
             
         # Check if data is correct, i.e. label is within range and mask is of correct size
-        if (sample['label'] > 1).all() and (sample['label'] < self.resizeTo).all(): 
+        if (sample['label'] > 1).all(): 
             return sample
         else:
             # return None to skip this sample
             return None
 
+
+class CustomMaskDataset(Dataset):
+    """US Images with a tip needle dataset."""
+    
+    def __init__(self, X, maskType='full', maskRadius=6):
+        """
+        Arguments:
+            X: a 2D array, each row consists of [filename, frameNum]
+            maskType: 'full' (default)
+                      'tip' (cube 3^3 around needle tip)
+        """
+        self.X = X
+        self.maskType = maskType
+        self.maskRadius = maskRadius
+
+    def __len__(self):
+        return len(self.X)
+
+    def __getitem__(self, idx):
+        if torch.is_tensor(idx):
+            idx = idx.tolist()
+            
+        # create frame image based on frame number and filename
+        f = self.X[idx, 0]
+        transformNum = random.randint(0, 10)
+        frameNumStr = self.X[idx, 1]
+        h5_file = h5py.File('../train/resized_train/'+f+'.hdf5', 'r')
+        img = h5_file["img"+"_"+frameNumStr+"_"+str(transformNum)][()]
+        tip_coords = h5_file["labels"+"_"+frameNumStr+"_"+str(transformNum)][()]
+        tip_coords_original = h5_file["labels_original"][int(float(frameNumStr)), :]
+        
+        if self.maskType=='full':
+            mask = h5_file["mask"+"_"+frameNumStr+"_"+str(transformNum)][()]
+        else:
+            mask = np.zeros((img.shape))
+            mask[np.around(tip_coords[0]-self.maskRadius).astype(int):np.around(tip_coords[0]+self.maskRadius).astype(int), 
+                 np.around(tip_coords[1]-self.maskRadius).astype(int):np.around(tip_coords[1]+self.maskRadius).astype(int), 
+                 np.around(tip_coords[2]-self.maskRadius).astype(int):np.around(tip_coords[2]+self.maskRadius).astype(int)
+                ] = 1
+            
+        h5_file.close()
+
+        img, mask, coords = transformWithLabel(img, mask, tip_coords)
+        
+        sample = {'image': img, 'mask': mask, 'label': coords, 'label_original': tip_coords_original}
+            
+        # Check if data is correct, i.e. label is within range and mask is of correct size
+        if (sample['label'] > 1).all(): 
+            return sample
+        else:
+            # return None to skip this sample
+            return None
+
+
+
+# custom collate function to filter out None samples
+def my_collate(batch):
+    batch = [b for b in batch if b is not None]
+    return default_collate(batch)
+
+
+
+
+
+#################################
+###  Older versions of datasets:
+#################################
 
 class ImageDataset(Dataset):
     """US Images with a tip needle dataset."""
@@ -136,7 +199,7 @@ class FullMaskDataset(Dataset):
         mask = h5_mask_file['default'][int(float(self.X[idx, 1]))]
         h5_mask_file.close()
 
-        img, mask, coords = transformWithLabel(img, mask, self.y[idx], self.cropTo)
+        img, mask, coords = transformAndCropWithLabel(img, mask, self.y[idx], self.cropTo)
     
         
         sample = {'image': img, 'mask': mask, 'label': coords}
@@ -147,11 +210,3 @@ class FullMaskDataset(Dataset):
         else:
             # return None to skip this sample
             return None
-
-        
-# custom collate function to filter out None samples
-def my_collate(batch):
-
-  batch = [b for b in batch if b is not None]
-
-  return default_collate(batch)
