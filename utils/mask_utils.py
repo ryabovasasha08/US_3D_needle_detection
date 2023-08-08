@@ -75,3 +75,17 @@ def get_needle_mask_of_frame_sequence(sequence_4d, labels, needle_diam=2.5, tip_
      frameSequenceMask[sequence_4d==0]=0
                     
      return frameSequenceMask
+ 
+def get_needle_mask_of_frame(sequence_3d, label, needle_diam=2.5, tip_length = 4, resolution=3):
+     
+    frameMask = np.zeros(sequence_3d.shape)
+    coords_3d = np.indices(sequence_3d.shape).reshape(3, -1).T
+     
+    for i in tqdm(range(0,len(coords_3d))):
+        coord = coords_3d[i]
+        if contains_in_needle(coord, label, needle_diam*resolution/2, tip_length*resolution):
+            frameMask[coord[0], coord[1], coord[2]] = 1
+                    
+    frameMask[sequence_3d==0]=0
+                   
+    return frameMask
