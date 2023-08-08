@@ -143,16 +143,12 @@ def cropOrResizeTransformWithLabel(image, mask, tip_coords, cropTo):
         tip_coords = np.array(tip_coords)-k
             
     else: # else resize
-        #resize everything to 128*128*128 and normalize
+        #resize everything to 128*128*128
         ratio = cropTo/image.shape[0]
         tip_coords = np.around(tip_coords*ratio).astype(int)
         image = ndimage.zoom(image, (ratio, ratio, ratio))
         mask = ndimage.zoom(mask, (ratio, ratio, ratio))
-        
-        mean = np.mean(image)
-        std = np.std(image)
-        image = (image - mean) / std
-        
+     
     return image, mask, tip_coords
 
 
