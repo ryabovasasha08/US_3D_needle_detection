@@ -87,12 +87,14 @@ class CustomMaskDataset(Dataset):
             
         # create frame image based on frame number and filename
         f = self.X[idx, 0]
-        transformNum = random.randint(0, 10)
-        frameNumStr = self.X[idx, 1]
+        transformNum = 10
+#        transformNum = random.randint(0, 10)
+        frameNumInt = int(float(self.X[idx, 1]))
+        frameNumStr = str(frameNumInt)
         h5_file = h5py.File('../train/resized_train/'+f+'.hdf5', 'r')
         img = h5_file["img"+"_"+frameNumStr+"_"+str(transformNum)][()]
         tip_coords = h5_file["labels"+"_"+frameNumStr+"_"+str(transformNum)][()]
-        tip_coords_original = h5_file["labels_original"][int(float(frameNumStr)), :]
+        tip_coords_original = h5_file["labels_original"][frameNumInt, :]
         
         if self.maskType=='full':
             mask = h5_file["mask"+"_"+frameNumStr+"_"+str(transformNum)][()]

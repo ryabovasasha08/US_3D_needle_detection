@@ -158,11 +158,19 @@ def normalize(image):
     return (image - mean) / std
 
         
-def transformWithLabel(img, mask, tip_coords, cropTo):
-        # add crop to cropTo size,  add random rotation and horizontal flip
-        img, mask, tip_coords = rotateTransformWithLabel(img, mask, tip_coords)
-        img, mask, tip_coords = flipxTransformWithLabel(img, mask, tip_coords)
-        img, mask, tip_coords = flipzTransformWithLabel(img, mask, tip_coords)
-        #crop transform should be the last, because it crops image to the even dimensions and prev transforms work on odd dimensions with center pixel
-        img, mask, tip_coords = cropOrResizeTransformWithLabel(img, mask, tip_coords, cropTo)
-        return normalize(img).copy()[np.newaxis, :, :, :], mask.copy()[np.newaxis, :, :, :], tip_coords.copy()
+def transformWithLabel(img, mask, tip_coords):
+    # add crop to cropTo size,  add random rotation and horizontal flip
+    img, mask, tip_coords = rotateTransformWithLabel(img, mask, tip_coords)
+    img, mask, tip_coords = flipxTransformWithLabel(img, mask, tip_coords)
+    img, mask, tip_coords = flipzTransformWithLabel(img, mask, tip_coords)
+    return normalize(img).copy()[np.newaxis, :, :, :], mask.copy()[np.newaxis, :, :, :], tip_coords.copy()
+    
+
+def transformAndCropWithLabel(img, mask, tip_coords, cropTo):
+    # add crop to cropTo size,  add random rotation and horizontal flip
+    img, mask, tip_coords = rotateTransformWithLabel(img, mask, tip_coords)
+    img, mask, tip_coords = flipxTransformWithLabel(img, mask, tip_coords)
+    img, mask, tip_coords = flipzTransformWithLabel(img, mask, tip_coords)
+    #crop transform should be the last, because it crops image to the even dimensions and prev transforms work on odd dimensions with center pixel
+    img, mask, tip_coords = cropOrResizeTransformWithLabel(img, mask, tip_coords, cropTo)
+    return normalize(img).copy()[np.newaxis, :, :, :], mask.copy()[np.newaxis, :, :, :], tip_coords.copy()
