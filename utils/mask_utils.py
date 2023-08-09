@@ -2,11 +2,12 @@ import torch
 from skimage.filters import threshold_otsu
 from tqdm import tqdm
 import numpy as np
+import torch
 
 
 def get_center_of_nonzero_4d_slice(tensor_4d):
     # Get nonzero indices
-    nz_indices = torch.nonzero(binarize_with_otsu(tensor_4d))
+    nz_indices = torch.nonzero(tensor_4d)
 
     # Find min and max indices 
     na, xmin, ymin, zmin = nz_indices.min(dim=0)[0].tolist()  
@@ -22,11 +23,13 @@ def get_center_of_nonzero_4d_slice(tensor_4d):
     return center
 
 
-
-def binarize_with_otsu(inputs):
-    thresh = threshold_otsu(inputs.detach().cpu().numpy())
-    binary = inputs > thresh
-    return binary.int()
+# dim - dimension to binarize
+# by default inputs are expected to be in shape [batch_size, 2, 128, 128, 128], so dim=1 by default
+# if input is passed as [2, 128, 128, 128], then dont forget to change dim to 0!
+def binarize_with_softmax(inputs, dimToSqueeze = 1):
+    probs = torch.nn.functional.softmax(inputs, dim=dimToSqueeze)
+    max_probs, preds = torch.max(probs, dim=dimToSqueeze) 
+    return torch.unsqueeze(preds, dimToSqueeze)
 
 
 def contains_in_needle(point, vertex, radius, tip_length):

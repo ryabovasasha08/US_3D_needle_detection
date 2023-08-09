@@ -8,51 +8,34 @@
 
 # %%
 # import all files from necessary directory
-from utils.labels_utils import get_all_files_mhd
-all_files_mhd = get_all_files_mhd("/data/Riabova/train/train_depth_0_70/")
-len(all_files_mhd)
+from os import listdir, path
+dir = "/data/Riabova/train/resized_train/"
+all_files = [path.join(dir, f) for f in listdir(dir)]
 
 # %%
-from utils.type_reader import mha_read_header
 import numpy as np
-from utils.labels_utils import get_labels
-from tqdm import tqdm
-
+import h5py
 # merge all images in one huge array
 
 all_frames_filenames_array = np.empty((1))
 frame_nums = np.empty((1))
-labels = np.empty((1, 3))
 i = 0
-for f in all_files_mhd:
+for f in all_files:
     if (i%20 == 0):
         print("File "+str(i)+"...")
-    info = mha_read_header(f)
-    labels = np.concatenate((labels, get_labels(f, info)), axis = 0)
-    all_frames_filenames_array = np.concatenate((all_frames_filenames_array, [f]*info['Dimensions'][3]), axis=0)
-    frame_nums = np.concatenate((frame_nums, np.arange(0, info['Dimensions'][3])), axis=0)
+    h5_file = h5py.File(f, 'r')
+    framesTotal = sum(item.startswith('img_') for item in list(h5_file.keys()))//11
+    h5_file.close()
+    all_frames_filenames_array = np.concatenate((all_frames_filenames_array, [f]*framesTotal), axis=0)
+    frame_nums = np.concatenate((frame_nums, np.arange(0, framesTotal)), axis=0)
     i+=1
     
 all_frames_filenames_array = all_frames_filenames_array[ 1:]
-labels = labels[1:, :]
 frame_nums = frame_nums[1:]
 
-# %%
-from PIL import Image
-import matplotlib.pyplot as plt
-from PIL import Image
-from utils.type_reader import get_image_array
-
-#Check that frames are being displayed correctly
-input_image = get_image_array(all_files_mhd[0])
-plt.imshow(input_image[:, :, 69, 3])
-
-# %%
 X = np.vstack((all_frames_filenames_array, frame_nums)).transpose()
-y = labels
 print(X.shape)
 print(X[0, :])
-print(y[0, :])
 
 # %%
 VALID_PERCENT = 0.2
@@ -61,13 +44,12 @@ BATCH_TRAIN = 10
 BATCH_VALID = 10
 BATCH_TEST = 10
 # note: original size - 235; resizing to 200 + batch size 5 caused cuda out of memory
-RESIZE_TO = 128
 
 # %%
 from sklearn.model_selection import train_test_split
 
-X_train, X_vt, y_train, y_vt = train_test_split(X[:, :], y[:, :], test_size=VALID_PERCENT+TEST_PERCENT, random_state=42, shuffle = True)
-X_valid, X_test, y_valid, y_test = train_test_split(X_vt[:, :], y_vt[:, :], test_size=TEST_PERCENT/(VALID_PERCENT+TEST_PERCENT), random_state=42,shuffle=True)
+X_train, X_vt = train_test_split(X[:, :], test_size=VALID_PERCENT+TEST_PERCENT, random_state=42, shuffle = True)
+X_valid, X_test = train_test_split(X_vt[:, :], test_size=TEST_PERCENT/(VALID_PERCENT+TEST_PERCENT), random_state=42,shuffle=True)
 print(f"Total training images: {X_train.shape[0]}")
 print(f"Total validation images: {X_valid.shape[0]}")
 print(f"Total test images: {X_test.shape[0]}")
@@ -76,24 +58,23 @@ print(f"Total test images: {X_test.shape[0]}")
 X_train.shape
 
 # %%
-from utils.datasets import FullMaskDataset, my_collate
+from utils.datasets import CustomMaskDataset, my_collate
 import torch
 
-train_dataset = FullMaskDataset(X_train, y_train, cropTo=RESIZE_TO)
-valid_dataset = FullMaskDataset(X_valid, y_valid, cropTo=RESIZE_TO)
-test_dataset = FullMaskDataset(X_test, y_test, cropTo=RESIZE_TO)
+train_dataset = CustomMaskDataset(X_train, maskType='full')
+valid_dataset = CustomMaskDataset(X_valid, maskType='full')
+test_dataset = CustomMaskDataset(X_test, maskType='full')
 train_dataloader = torch.utils.data.DataLoader(train_dataset,batch_size=BATCH_TRAIN,shuffle=True, collate_fn=my_collate)
 valid_dataloader = torch.utils.data.DataLoader(valid_dataset,batch_size=BATCH_VALID,shuffle=True, collate_fn=my_collate)
 test_dataloader = torch.utils.data.DataLoader(test_dataset,batch_size=BATCH_TEST,shuffle=True, collate_fn=my_collate)
 
 # %% [markdown]
 # ## u-net
-# ##### mask was created after image is resized to make the mask area a bit bigger
 
 # %%
 # init number of epochs to train for, and the
 # batch size of train and validation sets
-EPOCHS = 50
+EPOCHS = 200
 UNET_DEPTH = 4 # size of the image should divide by this number
 UNET_START_FILTERS = 3
 
@@ -105,7 +86,7 @@ MOMENTUM = 0.999
 # define threshold to filter weak predictions
 THRESHOLD = 0.5
 
-PATH_DIR = 'outputs_full_mask'
+PATH_DIR = 'outputs/outputs_new'
 
 # %%
 import torch
@@ -125,7 +106,7 @@ from utils.losses import IoULoss
 from utils.save_model_utils import SaveBestModel
 
 # state_epoch_20 = torch.load('outputs_side_128_epochs_0_50/epoch_20_model.pth')
-model = UNet(out_channels = 1, n_blocks=UNET_DEPTH, start_filts = UNET_START_FILTERS)
+model = UNet(out_channels = 2, n_blocks=UNET_DEPTH, start_filts = UNET_START_FILTERS)
 optimizer = optim.Adam(model.parameters(), lr = INIT_LR)# optim.RMSprop(model.parameters(),lr=INIT_LR, weight_decay=WEIGHT_DECAY, momentum=MOMENTUM, foreach=True)
 scheduler = None # optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=1)  # goal: minimize loss
 criterion = IoULoss()
@@ -143,6 +124,7 @@ import numpy as np
 import torch
 from utils.save_model_utils import save_model, save_plots, save_sample_mask
 from utils.accuracies import get_central_pixel_distance, get_pixel_accuracy_percent
+from utils.mask_utils import binarize_with_softmax
 
 class TrainerUNET:
     def __init__(self,
@@ -203,8 +185,8 @@ class TrainerUNET:
             print(f"Validation loss: {self.validation_loss[-1]:.3f}")
             # save the best model till now if we have the least loss in the current epoch
             save_best_model(self.validation_loss[-1], self.epoch, self.model, self.optimizer, self.criterion)
-            save_model(self.epochs, self.model, self.optimizer, self.criterion, self.training_loss[-1], self.validation_loss[-1], self.pixelwise_accuracy[-1], self.center_pixel_distances[-1], self.path_dir+'/epoch_'+str(self.epoch)+'_model.pth')
-            save_plots(self.epoch, self.training_loss, self.validation_loss, self.center_pixel_distances, self.pixelwise_accuracy, self.path_dir)
+            save_model(self.epochs, self.model, self.optimizer, self.criterion, self.training_loss[-1], self.validation_loss[-1], self.pixelwise_accuracy[-1], self.center_pixel_distances[-1], self.learning_rate[-1], self.path_dir+'/epoch_'+str(self.epoch)+'_model.pth')
+            save_plots(self.epoch, self.training_loss, self.validation_loss, self.center_pixel_distances, self.pixelwise_accuracy, self.learning_rate, self.path_dir)
 
             print('-'*50)
             
@@ -218,7 +200,7 @@ class TrainerUNET:
         # save the trained model weights for a final time
         save_model(self.epochs, self.model, self.optimizer, self.criterion, self.training_loss[-1], self.validation_loss[-1], self.pixelwise_accuracy[-1], self.center_pixel_distances[-1], self.path_dir+'/final_model.pth')
         # save the loss and accuracy plots
-        save_plots(self.epochs, self.training_loss, self.validation_loss, self.center_pixel_distances, self.pixelwise_accuracy, self.path_dir)
+        save_plots(self.epochs, self.training_loss, self.validation_loss, self.center_pixel_distances, self.pixelwise_accuracy, self.learning_rate, self.path_dir)
         print('TRAINING COMPLETE')
         return self.training_loss, self.validation_loss, self.learning_rate, self.pixelwise_accuracy, self.center_pixel_distances
 
@@ -239,9 +221,8 @@ class TrainerUNET:
         for i, sample_batched in batch_iter:
             input, target, labels = sample_batched['image'].to(self.device), sample_batched['mask'].to(self.device), sample_batched['label'].to(self.device)  # send to device (GPU or CPU)
             self.optimizer.zero_grad()  # zerograd the parameters
-            out = self.model(input)  # one forward pass
+            out = binarize_with_softmax(self.model(input), dim=1)  # one forward pass
             target.requires_grad_(True)
-            # out = out[:, np.newaxis, :, :, :]
             if i%30 == 0:
                 save_sample_mask(self.epoch, i, input[0], out[0], sample_batched['mask'][0], path = self.path_dir)        
         
@@ -278,9 +259,8 @@ class TrainerUNET:
         for i, sample_batched in batch_iter:
             input, target = sample_batched['image'].to(self.device), sample_batched['mask'].to(self.device)   # send to device (GPU or CPU)
 
-            
             with torch.no_grad():
-                out = self.model(input)
+                out = binarize_with_softmax(self.model(input), dim=1) 
                 loss = self.criterion(out, target)
                 loss_value = loss.item()
                 valid_losses.append(loss_value)

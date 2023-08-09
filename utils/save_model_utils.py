@@ -35,7 +35,7 @@ class SaveBestModel:
 
 
 
-def save_model(epochs, model, optimizer, criterion, train_loss, valid_loss, accuracy, center_distance, path):
+def save_model(epochs, model, optimizer, criterion, train_loss, valid_loss, accuracy, center_distance, learning_rate, path):
     """
     Function to save the trained model to disk.
     """
@@ -48,7 +48,8 @@ def save_model(epochs, model, optimizer, criterion, train_loss, valid_loss, accu
                 'train_loss':train_loss,
                 'valid_loss':valid_loss,
                 'accuracy':accuracy,
-                'center_distance':center_distance
+                'center_distance':center_distance,
+                'lr':learning_rate
                 }, path)
 
 
@@ -104,7 +105,7 @@ def save_sample_mask(epoch, batch, image, inp_mask, target_mask, path = "", save
     
     
 # Function to save the loss plots to disk.   
-def save_plots(epochs, train_loss, valid_loss, center_pixel_distances, pixelwise_accuracy, path):
+def save_plots(epochs, train_loss, valid_loss, center_pixel_distances, pixelwise_accuracy, learning_rate, path):
     
     # accuracy plots
     plt.figure()
@@ -122,6 +123,14 @@ def save_plots(epochs, train_loss, valid_loss, center_pixel_distances, pixelwise
     plt.xlabel('Epochs')
     plt.ylabel('Distance, px')
     plt.savefig(path+'/center_pixel_distance.jpg')
+    plt.close()
+    
+    plt.figure()
+    plt.plot(np.arange(0, epochs), learning_rate, color='green', linestyle='-')
+    plt.title("Learning rates")
+    plt.xlabel('Epochs')
+    plt.ylabel('learning rate')
+    plt.savefig(path+'/learning_rate.jpg')
     plt.close()
     
     # loss plots
