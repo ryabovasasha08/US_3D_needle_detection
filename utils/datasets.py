@@ -36,9 +36,7 @@ class FrameDiffDataset(Dataset):
         if torch.is_tensor(idx):
             idx = idx.tolist()
 
-        f = self.X[idx][0][:-4].split("/")[-1]
-        h5_file = h5py.File('../train/resized_train/'+f+'.hdf5', 'r')
-        
+        h5_file = h5py.File(self.X[idx][0], 'r')
         
         img_1 = h5_file["img"+"_"+self.X[idx][1]+"_"+str(10)][()]
         img_2 = h5_file["img"+"_"+self.X[idx][2]+"_"+str(10)][()]
@@ -86,12 +84,11 @@ class CustomMaskDataset(Dataset):
             idx = idx.tolist()
             
         # create frame image based on frame number and filename
-        f = self.X[idx, 0]
         transformNum = 10
 #        transformNum = random.randint(0, 10)
         frameNumInt = int(float(self.X[idx, 1]))
         frameNumStr = str(frameNumInt)
-        h5_file = h5py.File('../train/resized_train/'+f+'.hdf5', 'r')
+        h5_file = h5py.File(self.X[idx, 0], 'r')
         img = h5_file["img"+"_"+frameNumStr+"_"+str(transformNum)][()]
         tip_coords = h5_file["labels"+"_"+frameNumStr+"_"+str(transformNum)][()]
         tip_coords_original = h5_file["labels_original"][frameNumInt, :]
