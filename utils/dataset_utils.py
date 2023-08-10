@@ -78,7 +78,7 @@ def getImageDatasetDatapointResized(filename, frame_num, labels, mask_diam=6, re
     return input_image, mask_image, us_tip_coords_resized, us_tip_coord_flattened
 
 
-def flipxTransformWithLabel(img, mask, tip_coords):
+def flipxTransformWithLabel(img, mask, tip_coords, coords_original, IMG_INITIAL_SIZE = 235):
     rand_int = random.randint(0, 1)
     
     if rand_int == 0:
@@ -87,13 +87,20 @@ def flipxTransformWithLabel(img, mask, tip_coords):
         img = np.flip(img, axis=0)
         mask = np.flip(mask, axis=0)
         shift_to_origin_vector = np.array([(img.shape[0]-1)/2, 0, (img.shape[2]-1)/2])
-        tip_coords = tip_coords - shift_to_origin_vector
-        tip_coords = np.array([-tip_coords[0], tip_coords[1], tip_coords[2]])
-        tip_coords = tip_coords + shift_to_origin_vector
-        
-    return img, mask, tip_coords
+        shift_to_origin_unresized_vector = np.array([(IMG_INITIAL_SIZE-1)/2, 0, (IMG_INITIAL_SIZE-1)/2])
 
-def flipzTransformWithLabel(img, mask, tip_coords):
+        tip_coords = tip_coords - shift_to_origin_vector
+        coords_original = coords_original - shift_to_origin_unresized_vector
+        
+        tip_coords = np.array([-tip_coords[0], tip_coords[1], tip_coords[2]])
+        coords_original = np.array([-coords_original[0], coords_original[1], coords_original[2]])
+
+        tip_coords = tip_coords + shift_to_origin_vector
+        coords_original = coords_original + shift_to_origin_unresized_vector
+
+    return img, mask, tip_coords, coords_original
+
+def flipzTransformWithLabel(img, mask, tip_coords, coords_original, IMG_INITIAL_SIZE = 235):
     rand_int = random.randint(0, 1)
     
     if rand_int == 0:
@@ -102,17 +109,26 @@ def flipzTransformWithLabel(img, mask, tip_coords):
         img = np.flip(img, axis=2)
         mask = np.flip(mask, axis=2)
         shift_to_origin_vector = np.array([(img.shape[0]-1)/2, 0, (img.shape[2]-1)/2])
+        shift_to_origin_unresized_vector = np.array([(IMG_INITIAL_SIZE-1)/2, 0, (IMG_INITIAL_SIZE-1)/2])
+
         tip_coords = tip_coords - shift_to_origin_vector
-        tip_coords = np.array([tip_coords[0], tip_coords[1], -tip_coords[2]])
-        tip_coords = tip_coords + shift_to_origin_vector
+        coords_original = coords_original - shift_to_origin_unresized_vector
         
-    return img, mask, tip_coords
+        tip_coords = np.array([tip_coords[0], tip_coords[1], -tip_coords[2]])
+        coords_original = np.array([coords_original[0], coords_original[1], -coords_original[2]])
+        
+        tip_coords = tip_coords + shift_to_origin_vector
+        coords_original = coords_original + shift_to_origin_unresized_vector
+        
+    return img, mask, tip_coords, coords_original
 
         
-def rotateTransformWithLabel(img, mask, tip_coords):
+def rotateTransformWithLabel(img, mask, tip_coords, coords_original, IMG_INITIAL_SIZE = 235):
     rand_int = random.randint(0, 3)
     shift_to_origin_vector = np.array([(img.shape[0]-1)/2, 0, (img.shape[2]-1)/2])
+    shift_to_origin_unresized_vector = np.array([(IMG_INITIAL_SIZE-1)/2, 0, (IMG_INITIAL_SIZE-1)/2])
     tip_coords = tip_coords - shift_to_origin_vector
+    coords_original = coords_original - shift_to_origin_unresized_vector
   
     # Perform rotation based on random integer
     if rand_int == 0:
@@ -121,18 +137,22 @@ def rotateTransformWithLabel(img, mask, tip_coords):
         img = np.rot90(img, k=1, axes=(0, 2)) # Rotate 90 degrees
         mask = np.rot90(mask, k=1, axes=(0, 2)) # Rotate 90 degrees
         tip_coords = np.array([-tip_coords[2], tip_coords[1], tip_coords[0]])
+        coords_original = np.array([-coords_original[2], coords_original[1], coords_original[0]])
     elif rand_int == 2:
         img = np.rot90(img, k=2, axes=(0, 2)) # Rotate 180 degrees
         mask = np.rot90(mask, k=2, axes=(0, 2)) # Rotate 180 degrees
         tip_coords = np.array([-tip_coords[0], tip_coords[1], -tip_coords[2]])
+        coords_original = np.array([-coords_original[0], coords_original[1], -coords_original[2]])
     elif rand_int == 3: 
         img = np.rot90(img, k=3, axes=(0, 2)) # Rotate 270 degrees
         mask = np.rot90(mask, k=3, axes=(0, 2))
         tip_coords = np.array([tip_coords[2], tip_coords[1], -tip_coords[0]])
-        
+        coords_original = np.array([coords_original[2], coords_original[1], -coords_original[0]])
+
     tip_coords = tip_coords + shift_to_origin_vector
+    coords_original = coords_original + shift_to_origin_unresized_vector
     
-    return img, mask, tip_coords
+    return img, mask, tip_coords, coords_original
         
 def cropOrResizeTransformWithLabel(image, mask, tip_coords, cropTo):
     k = random.randint(0, image.shape[1]-cropTo)
@@ -158,12 +178,12 @@ def normalize(image):
     return (image - mean) / std
 
         
-def transformWithLabel(img, mask, tip_coords):
+def transformWithLabel(img, mask, tip_coords, coords_original):
     # add crop to cropTo size,  add random rotation and horizontal flip
-    img, mask, tip_coords = rotateTransformWithLabel(img, mask, tip_coords)
-    img, mask, tip_coords = flipxTransformWithLabel(img, mask, tip_coords)
-    img, mask, tip_coords = flipzTransformWithLabel(img, mask, tip_coords)
-    return normalize(img).copy()[np.newaxis, :, :, :], mask.copy()[np.newaxis, :, :, :], tip_coords.copy()
+    img, mask, tip_coords, coords_original = rotateTransformWithLabel(img, mask, tip_coords, coords_original)
+    img, mask, tip_coords, coords_original = flipxTransformWithLabel(img, mask, tip_coords, coords_original)
+    img, mask, tip_coords, coords_original = flipzTransformWithLabel(img, mask, tip_coords, coords_original)
+    return normalize(img).copy()[np.newaxis, :, :, :], mask.copy()[np.newaxis, :, :, :], tip_coords.copy(), coords_original.copy()
     
 
 def transformAndCropWithLabel(img, mask, tip_coords, cropTo):

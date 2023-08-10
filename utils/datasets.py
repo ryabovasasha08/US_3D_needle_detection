@@ -20,17 +20,16 @@ class FrameDiffDataset(Dataset):
 
     # passed X must contain two pairs of frames of the same frame sequence with difference of frame_diff
     # passed y must contain needle tip coords for the second of the needle frames
-    def __init__(self, X, y):
+    def __init__(self, X):
         """
         Arguments:
             transform (callable, optional): Optional transform to be applied
                 on a sample.
         """
         self.X = X
-        self.y = y
 
     def __len__(self):
-        return len(self.y)
+        return len(self.X)
 
     def __getitem__(self, idx):
         if torch.is_tensor(idx):
@@ -38,19 +37,23 @@ class FrameDiffDataset(Dataset):
 
         h5_file = h5py.File(self.X[idx][0], 'r')
         
-        img_1 = h5_file["img"+"_"+self.X[idx][1]+"_"+str(10)][()]
-        img_2 = h5_file["img"+"_"+self.X[idx][2]+"_"+str(10)][()]
-        mask_1 = h5_file["mask"+"_"+self.X[idx][1]+"_"+str(10)][()]
-        mask_2 = h5_file["mask"+"_"+self.X[idx][2]+"_"+str(10)][()]
-        tip_coords = h5_file["labels"+"_"+self.X[idx][2]+"_"+str(10)][()]
-        tip_coords_original = h5_file["labels_original"][int(float(self.X[idx][2])), :]
+        #remove '.0' at the end of each frame number
+        idx1 = self.X[idx][1][:-2]
+        idx2 = self.X[idx][2][:-2]
+        
+        img_1 = h5_file["img"+"_"+idx1+"_"+str(10)][()]
+        img_2 = h5_file["img"+"_"+idx2+"_"+str(10)][()]
+        mask_1 = h5_file["mask"+"_"+idx1+"_"+str(10)][()]
+        mask_2 = h5_file["mask"+"_"+idx2+"_"+str(10)][()]
+        tip_coords = (h5_file["labels"+"_"+idx2+"_"+str(10)][()]+h5_file["labels"+"_"+idx1+"_"+str(10)][()])/2
+        tip_coords_original = (h5_file["labels_original"][int(idx2), :]+h5_file["labels_original"][int(idx1), :])/2
         
         h5_file.close
     
         img = img_2-img_1
         mask = mask_2-mask_1
         
-        img, mask, coords = transformWithLabel(img, mask, tip_coords)
+        img, mask, coords, tip_coords_original = transformWithLabel(img, mask, tip_coords, tip_coords_original)
         
         sample = {'image': img, 'mask': mask, 'label': coords, 'label_original': tip_coords_original}
             
@@ -104,7 +107,7 @@ class CustomMaskDataset(Dataset):
             
         h5_file.close()
 
-        img, mask, coords = transformWithLabel(img, mask, tip_coords)
+        img, mask, coords, tip_coords_original = transformWithLabel(img, mask, tip_coords, tip_coords_original)
         
         sample = {'image': img, 'mask': mask, 'label': coords, 'label_original': tip_coords_original}
             
