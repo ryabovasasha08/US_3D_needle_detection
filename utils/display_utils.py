@@ -6,26 +6,32 @@ from matplotlib import patches
 
 
 def show_sample(sample):
-    plt.figure(figsize=(12, 12))
-    
-    plt.subplot(1, 3, 1)
+    fig = plt.figure(figsize=(12, 12))
+        
+    x = sample['label'][0].int()
+    y = sample['label'][1].int()
+    z = sample['label'][2].int()
+
+    ax1 = fig.add_subplot(1, 3, 1)
     plt.title("OYZ")
-    x = sample['label'][0]
     plt.imshow(sample['image'][0, x, :, :], interpolation='none')
     plt.imshow(sample['mask'][0, x, :, :], interpolation='none', alpha = 0.7)
-    
-    plt.subplot(1, 3, 2)
+    ax1.add_patch(patches.Circle((y, z), radius=0.5, color='red'))
+
+
+    ax2 = fig.add_subplot(1, 3, 2)
     plt.title("OXZ")
-    y = sample['label'][1]
     plt.imshow(sample['image'][0, :, y, :], interpolation='none')
     plt.imshow(sample['mask'][0, :, y, :], interpolation='none', alpha = 0.7)
-    
-    plt.subplot(1, 3, 3)
+    ax2.add_patch(patches.Circle((z, x), radius=0.5, color='red'))
+
+
+    ax3 = fig.add_subplot(1, 3, 3)
     plt.title("OXY")
-    z = sample['label'][2]
-    plt.imshow(sample['image'][0, :, :, z], interpolation='none')
-    plt.imshow(sample['mask'][0, :, :, z], interpolation='none', alpha = 0.7)
-    
+    plt.imshow(sample['image'][0, :, :, z].T, interpolation='none')
+    plt.imshow(sample['mask'][0, :, :, z].T, interpolation='none', alpha = 0.7)
+    ax3.add_patch(patches.Circle((x, y), radius=0.5, color='red'))
+
     plt.axis('off')
     plt.show()
     
