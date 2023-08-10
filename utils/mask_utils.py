@@ -2,25 +2,36 @@ import torch
 from skimage.filters import threshold_otsu
 from tqdm import tqdm
 import numpy as np
-import torch
+import torch 
+import numpy as np
+from skimage.measure import label
 
-
+# First define the largest connected component of the 4D slice, 
+# then calculate the mean of its pixels' coordinates
 def get_center_of_nonzero_4d_slice(tensor_4d):
-    # Get nonzero indices
-    nz_indices = torch.nonzero(tensor_4d)
+    mask = torch.squeeze(tensor_4d, dim=0).detach().cpu().numpy()
+    # Label connected components
+    labels = label(mask)
+    largest_cc = np.bincount(labels.flat)[1:].argmax() + 1
 
-    # Find min and max indices 
-    na, xmin, ymin, zmin = nz_indices.min(dim=0)[0].tolist()  
-    na, xmax, ymax, zmax = nz_indices.max(dim=0)[0].tolist()
+    # Create density map 
+    mask_largest_cc = np.zeros_like(mask)
+    mask_largest_cc[labels==largest_cc] = 1 
 
-    # Calculate center point
-    x_center = (xmin + xmax) // 2
-    y_center = (ymin + ymax) // 2 
-    z_center = (zmin + zmax) // 2
+    # Get indices of pixels with value 1
+    idx = np.where(mask_largest_cc == 1) 
 
-    center = (x_center, y_center, z_center)
+    # Get coordinates   
+    x = idx[0]
+    y = idx[1]
+    z = idx[2]
 
-    return center
+    # Calculate mean 
+    x_mean = np.mean(x)
+    y_mean = np.mean(y)
+    z_mean = np.mean(z)
+    
+    return x_mean, y_mean, z_mean
 
 
 # dim - dimension to binarize
