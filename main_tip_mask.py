@@ -61,9 +61,9 @@ X_train.shape
 from utils.datasets import CustomMaskDataset, my_collate
 import torch
 
-train_dataset = CustomMaskDataset(X_train, maskType='full')
-valid_dataset = CustomMaskDataset(X_valid, maskType='full')
-test_dataset = CustomMaskDataset(X_test, maskType='full')
+train_dataset = CustomMaskDataset(X_train, maskType='tip')
+valid_dataset = CustomMaskDataset(X_valid, maskType='tip')
+test_dataset = CustomMaskDataset(X_test, maskType='tip')
 train_dataloader = torch.utils.data.DataLoader(train_dataset,batch_size=BATCH_TRAIN,shuffle=True, collate_fn=my_collate)
 valid_dataloader = torch.utils.data.DataLoader(valid_dataset,batch_size=BATCH_VALID,shuffle=True, collate_fn=my_collate)
 test_dataloader = torch.utils.data.DataLoader(test_dataset,batch_size=BATCH_TEST,shuffle=True, collate_fn=my_collate)
@@ -86,7 +86,7 @@ MOMENTUM = 0.999
 # define threshold to filter weak predictions
 THRESHOLD = 0.5
 
-PATH_DIR = 'outputs/outputs_new'
+PATH_DIR = 'outputs/outputs_new_tip_mask'
 
 # %%
 import torch
@@ -113,7 +113,7 @@ criterion = IoULoss()
 save_best_model = SaveBestModel(PATH_DIR)
 
 #model.to(device).load_state_dict(state_epoch_20['model_state_dict'])
-#optimizer.load_state_dict(state_epoch_20['optimizer_state_dict'])
+#optimizer.load_state_dict(state_epoddch_20['optimizer_state_dict'])
 
 
 # %%
@@ -123,8 +123,7 @@ model
 import numpy as np
 import torch
 from utils.save_model_utils import save_model, save_plots, save_sample_mask
-from utils.accuracies import get_full_mask_tip_pixel_distance, get_pixel_accuracy_percent, get_precision, get_recall
-from utils.mask_utils import binarize_with_softmax
+from utils.accuracies import get_central_pixel_distance, get_pixel_accuracy_percent, get_recall, get_precision
 
 class TrainerUNET:
     def __init__(self,
@@ -158,9 +157,9 @@ class TrainerUNET:
         self.training_loss = []
         self.validation_loss = []
         self.tip_pixel_distances = []
-        self.pixelwise_accuracy = []
         self.precisions = []
-        self.recalls =[]
+        self.recalls = []
+        self.pixelwise_accuracy = []
         self.learning_rate = []
         
     def run_trainer(self):
@@ -213,7 +212,7 @@ class TrainerUNET:
             print('TESTING COMPLETE')
 
         
-        return 
+        return self.training_loss, self.validation_loss, self.learning_rate, self.pixelwise_accuracy, self.tip_pixel_distances
 
     def _train(self):
 
@@ -225,32 +224,32 @@ class TrainerUNET:
         self.model.train()  # train mode
         train_losses = []  # accumulate the losses here
         pixelwise_accuracy_within_batch = []
-        precision_within_batch = []
-        recall_within_batch = []
         tip_pixel_distance_within_batch = []
+        precisions_within_batch = []
+        recalls_within_batch = []
         batch_iter = tqdm(enumerate(self.training_DataLoader), 'Training', total=len(self.training_DataLoader),
                           leave=False)
 
         for i, sample_batched in batch_iter:
             input, target, labels = sample_batched['image'].to(self.device), sample_batched['mask'].to(self.device), sample_batched['label'].to(self.device)  # send to device (GPU or CPU)
+            self.optimizer.zero_grad()  # zerograd the parameters
             #out = binarize_with_softmax(self.model(input), dimToSqueeze=1)  # one forward pass
             out = self.model(input)
             
+            target.requires_grad_(True)
             #if i%30 == 0:
             #    save_sample_mask(self.epoch, i, input[0], out[0], sample_batched['mask'][0], path = self.path_dir)        
         
             loss = self.criterion(out, target)  # calculate loss
             loss_value = loss.item()
-            
-            self.optimizer.zero_grad()  # zerograd the parameters
             loss.backward()  # one backward pass
             self.optimizer.step()  # update the parameters
-                                    
+                        
             train_losses.append(loss_value)
             pixelwise_accuracy_within_batch.append(get_pixel_accuracy_percent(out, target))
-            precision_within_batch.append(get_precision(out, target))
-            recall_within_batch.append(get_recall(out, target))
-            tip_pixel_distance_within_batch.append(get_full_mask_tip_pixel_distance(out, labels))
+            tip_pixel_distance_within_batch.append(get_central_pixel_distance(out, labels))
+            precisions_within_batch.append(get_precision(out, labels))
+            recalls_within_batch.append(get_recall(out, labels))
 
             batch_iter.set_description(f'Training: (loss {loss_value:.4f})')  # update progressbar
             
@@ -258,9 +257,10 @@ class TrainerUNET:
 
         self.training_loss.append(np.mean(train_losses))
         self.pixelwise_accuracy.append(np.mean(pixelwise_accuracy_within_batch))
-        self.precisions.append(np.mean(precision_within_batch))
-        self.recalls.append(np.mean(recall_within_batch))
         self.tip_pixel_distances.append(np.mean(tip_pixel_distance_within_batch))
+        self.precisions.append(np.mean(precisions_within_batch))
+        self.recalls.append(np.mean(recalls_within_batch))
+
         self.learning_rate.append(self.optimizer.param_groups[0]['lr'])
 
         batch_iter.close()
@@ -302,9 +302,9 @@ class TrainerUNET:
         self.model.eval()  # evaluation mode
         test_losses = []  # accumulate the losses here
         pixelwise_accuracies = []
+        tip_pixel_distances = []
         precisions = []
         recalls = []
-        tip_pixel_distances = []
         batch_iter = tqdm(enumerate(self.validation_DataLoader), 'Test', total=len(self.validation_DataLoader),
                           leave=False)
 
@@ -318,18 +318,18 @@ class TrainerUNET:
                 loss_value = loss.item()
                 test_losses.append(loss_value)
                 pixelwise_accuracies.append(get_pixel_accuracy_percent(out, target))
+                tip_pixel_distances.append(get_central_pixel_distance(out, labels))
                 precisions.append(get_precision(out, target))
                 recalls.append(get_recall(out, target))
-                tip_pixel_distances.append(get_full_mask_tip_pixel_distance(out, labels))
             
                 batch_iter.set_description(f'Test: (loss {loss_value:.4f})')
                 
         print("Test results:")
         print(np.mean(test_losses))
         print(np.mean(pixelwise_accuracies))
-        print(np.mean(tip_pixel_distances))
         print(np.mean(precisions))
         print(np.mean(recalls))
+        print(np.mean(tip_pixel_distances))
 
         batch_iter.close()
 
@@ -351,6 +351,11 @@ trainer = TrainerUNET(model=model,
 
 # %%
 # start training
-trainer.run_trainer()
+training_losses, validation_losses, lr_rates, pixelwise_accuracy, tip_pixel_distances = trainer.run_trainer()
+#print(list(training_losses))
+#print(list(validation_losses))
+#print(list(lr_rates))
+#print(list(pixelwise_accuracy))
+#print(list(tip_pixel_distances))
 
 # %%

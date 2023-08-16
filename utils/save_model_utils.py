@@ -34,8 +34,7 @@ class SaveBestModel:
                 }, self.path+'/best_model.pth')
 
 
-
-def save_model(epochs, model, optimizer, criterion, train_loss, valid_loss, accuracy, center_distance, learning_rate, path):
+def save_model(epochs, model, optimizer, criterion, train_loss, valid_loss, accuracy, precision, recall, center_distance, learning_rate, path):
     """
     Function to save the trained model to disk.
     """
@@ -48,6 +47,8 @@ def save_model(epochs, model, optimizer, criterion, train_loss, valid_loss, accu
                 'train_loss':train_loss,
                 'valid_loss':valid_loss,
                 'accuracy':accuracy,
+                'precision':precision,
+                'recall':recall,
                 'center_distance':center_distance,
                 'lr':learning_rate
                 }, path)
@@ -64,6 +65,9 @@ def save_sample_mask(epoch, batch, image, inp_mask, target_mask, path = "", save
 
     # Get nonzero indices 
     x, y, z = get_center_of_nonzero_4d_slice(target_mask)
+    x = int(x)
+    y = int(y)
+    z = int(z)
 
     axes[0, 2].imshow(inp_mask_np[0, x, :, :], cmap = 'gray', interpolation='none')
     axes[0, 2].set_title("OYZ - pred")
@@ -97,7 +101,7 @@ def save_sample_mask(epoch, batch, image, inp_mask, target_mask, path = "", save
     plt.axis('off')
     
     if (save):
-        plt.savefig(path+'/epoch_'+str(epoch)+'_batch_'+str(batch)+'.png')
+        plt.savefig(path+'/epoch_'+str(epoch)+'_batch_'+str(batch)+'.jpg')
     else:
         plt.show()
         
@@ -105,7 +109,7 @@ def save_sample_mask(epoch, batch, image, inp_mask, target_mask, path = "", save
     
     
 # Function to save the loss plots to disk.   
-def save_plots(epochs, train_loss, valid_loss, center_pixel_distances, pixelwise_accuracy, learning_rate, path):
+def save_plots(epochs, train_loss, valid_loss, center_pixel_distances, pixelwise_accuracy, precision, recall, learning_rate, path):
     
     # accuracy plots
     plt.figure()
@@ -116,6 +120,23 @@ def save_plots(epochs, train_loss, valid_loss, center_pixel_distances, pixelwise
     plt.savefig(path+'/pixelwise_accuracy.jpg')
     plt.close()
     
+    # precision plots
+    plt.figure()
+    plt.plot(np.arange(0, epochs), precision, color='green', linestyle='-')
+    plt.title("Precision")
+    plt.xlabel('Epochs')
+    plt.ylabel('Precision, %')
+    plt.savefig(path+'/precision.jpg')
+    plt.close()
+    
+    # recall plots
+    plt.figure()
+    plt.plot(np.arange(0, epochs), recall, color='green', linestyle='-')
+    plt.title("Recall over epochs")
+    plt.xlabel('Epochs')
+    plt.ylabel('Recall, %')
+    plt.savefig(path+'/recall.jpg')
+    plt.close()
     
     plt.figure()
     plt.plot(np.arange(0, epochs), center_pixel_distances, color='green', linestyle='-')

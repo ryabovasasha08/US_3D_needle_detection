@@ -12,7 +12,12 @@ def get_center_of_nonzero_4d_slice(tensor_4d):
     mask = torch.squeeze(tensor_4d, dim=0).detach().cpu().numpy()
     # Label connected components
     labels = label(mask)
-    largest_cc = np.bincount(labels.flat)[1:].argmax() + 1
+    if len(np.bincount(labels.flat)[1:])>0:
+        largest_cc = np.bincount(labels.flat)[1:].argmax() + 1
+    else:
+        # return the origin
+        print("np.bincount(labels.flat)[1:] is empty")
+        return (0, 0, 0)
 
     # Create density map 
     mask_largest_cc = np.zeros_like(mask)
@@ -32,6 +37,51 @@ def get_center_of_nonzero_4d_slice(tensor_4d):
     z_mean = np.mean(z)
     
     return x_mean, y_mean, z_mean
+
+# First define the largest connected component of the 4D slice, 
+# then calculate the mean of its pixels' coordinates
+def get_ends_of_nonzero_4d_slice(tensor_4d):
+    mask = torch.squeeze(tensor_4d, dim=0).detach().cpu().numpy()
+    # Label connected components
+    labels = label(mask)
+    if len(np.bincount(labels.flat)[1:])>0:
+        largest_cc = np.bincount(labels.flat)[1:].argmax() + 1
+    else:
+        # return the origin
+        print("np.bincount(labels.flat)[1:] is empty")
+        return [(0, 0, 0), (0, 0, 0)]
+
+    # Create density map 
+    mask_largest_cc = np.zeros_like(mask)
+    mask_largest_cc[labels==largest_cc] = 1 
+
+    # Get indices of pixels with value 1
+    idx = np.where(mask_largest_cc == 1) 
+
+    # Get coordinates   
+    x = idx[0]
+    y = idx[1]
+    z = idx[2]
+    
+
+    # calculate along which coordinates the range of values is the biggest (= which side is the longest). 
+    # It is never the y axis (height), so either x or z
+    
+    range1 = max(x) - min(x)  
+    range3 = max(z) - min(z)
+    
+    y_mean = np.mean(y)
+    
+    if range1>range3: # so needle is located in the volume along x axis
+        z_mean = np.mean(z)
+        x_min = min(x)
+        x_max = max(x)
+        return [(x_min, y_mean, z_mean), (x_max, y_mean, z_mean)]
+    else: # so needle is located in the volume along z axis
+        x_mean = np.mean(x)
+        z_min = min(z)
+        z_max = max(z)
+        return [(x_mean, y_mean, z_min), (x_mean, y_mean, z_max)]
 
 
 # dim - dimension to binarize
