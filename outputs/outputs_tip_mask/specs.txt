@@ -1,4 +1,0 @@
-epochs: 30
-dataset: ImageDataset (mask is a ball around tip coords, only resize)
-loss: iou 
-size of images: 128*128*128
