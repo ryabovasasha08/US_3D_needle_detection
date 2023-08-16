@@ -61,21 +61,31 @@ def get_central_pixel_distance(inputs, labels):
     inputs = torch.round(torch.sigmoid(inputs))
     batch_size = len(inputs)
     distance = 0
+    
+    batches_to_ignore = 0
         
     for i in range(0, batch_size):
         input_center = get_center_of_nonzero_4d_slice(inputs[i])
-        distance += np.linalg.norm(np.array(input_center) - labels[i].cpu().numpy())
+        if sum(input_center) == 0:
+            batches_to_ignore +=1
+        else:
+            distance += np.linalg.norm(np.array(input_center) - labels[i].cpu().numpy())
     
-    return distance/batch_size
+    return distance/(batch_size-batches_to_ignore)
 
 def get_full_mask_tip_pixel_distance(inputs, labels):
     inputs = torch.round(torch.sigmoid(inputs))
     batch_size = len(inputs)
     distance = 0
+    
+    batches_to_ignore = 0
         
     for i in range(0, batch_size):
         input_ends = get_ends_of_nonzero_4d_slice(inputs[i])
-        label_numpy =labels[i].cpu().numpy()
-        distance += min(np.linalg.norm(np.array(input_ends[0]) - label_numpy), np.linalg.norm(np.array(input_ends[1]) - label_numpy))
+        if sum(input_ends[0]) == 0 and sum(input_ends[1]) == 0:
+            batches_to_ignore +=1
+        else:    
+            label_numpy =labels[i].cpu().numpy()
+            distance += min(np.linalg.norm(np.array(input_ends[0]) - label_numpy), np.linalg.norm(np.array(input_ends[1]) - label_numpy))
     
-    return distance/batch_size
+    return distance/(batch_size-batches_to_ignore)
