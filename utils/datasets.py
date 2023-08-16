@@ -46,7 +46,7 @@ class FrameDiffDataset(Dataset):
         mask_1 = h5_file["mask"+"_"+idx1+"_"+str(10)][()]
         mask_2 = h5_file["mask"+"_"+idx2+"_"+str(10)][()]
         tip_coords = (h5_file["labels"+"_"+idx2+"_"+str(10)][()]+h5_file["labels"+"_"+idx1+"_"+str(10)][()])/2
-        tip_coords_original = (h5_file["labels_original"][int(idx2), :]+h5_file["labels_original"][int(idx1), :])/2
+        tip_coords_original = (h5_file["labels_original_new"][int(idx2), :]+h5_file["labels_original_new"][int(idx1), :])/2
         
         h5_file.close
     
@@ -94,7 +94,7 @@ class CustomMaskDataset(Dataset):
         h5_file = h5py.File(self.X[idx, 0], 'r')
         img = h5_file["img"+"_"+frameNumStr+"_"+str(transformNum)][()]
         tip_coords = h5_file["labels"+"_"+frameNumStr+"_"+str(transformNum)][()]
-        tip_coords_original = h5_file["labels_original"][frameNumInt, :]
+        tip_coords_original = h5_file["labels_original_new"][frameNumInt, :]
         
         if self.maskType=='full':
             mask = h5_file["mask"+"_"+frameNumStr+"_"+str(transformNum)][()]
