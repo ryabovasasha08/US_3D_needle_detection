@@ -44,7 +44,6 @@ print(X[10, :])
 
 # %%
 VALID_PERCENT = 0.2
-TEST_PERCENT = 0.2
 BATCH_TRAIN = 10
 BATCH_VALID = 10
 BATCH_TEST = 10
@@ -52,6 +51,11 @@ BATCH_TEST = 10
 
 # %%
 from sklearn.model_selection import train_test_split
+
+# If splitting train+validation+test as 6:2:2,you get ???, so separating 300 images before to fix the test set
+X_train, X_valid = train_test_split(X[300:, :], test_size=VALID_PERCENT, random_state=42, shuffle = True)
+X_test = X[:300, :]
+
 
 X_train, X_vt = train_test_split(X[:, :], test_size=VALID_PERCENT+TEST_PERCENT, random_state=42, shuffle = True)
 X_valid, X_test = train_test_split(X_vt[:, :], test_size=TEST_PERCENT/(VALID_PERCENT+TEST_PERCENT), random_state=42,shuffle=True)
@@ -91,7 +95,7 @@ MOMENTUM = 0.999
 # define threshold to filter weak predictions
 THRESHOLD = 0.5
 
-PATH_DIR = 'outputs/outputs_new_diff_mask'
+PATH_DIR = 'outputs/outputs_new_diff_mask_2'
 
 # %%
 import torch
@@ -212,6 +216,17 @@ class TrainerUNET:
         save_plots(self.epochs, self.training_loss, self.validation_loss, self.tip_pixel_distances, self.pixelwise_accuracy, self.precisions, self.recalls, self.learning_rate, self.path_dir)
         print('TRAINING COMPLETE')
         
+        new_file = h5py.File(self.path_dir+'train_test_data.hdf5', 'w')
+        new_file.create_dataset("training_loss", data=self.training_loss)
+        new_file.create_dataset("valid_loss", data=self.validation_loss)
+        new_file.create_dataset("tr_tip_pixel_distance", data=self.tip_pixel_distances)
+        new_file.create_dataset("tr_pixelwise_accuracy", data=self.pixelwise_accuracy)
+        new_file.create_dataset("tr_precisions", data=self.precisions)
+        new_file.create_dataset("tr_recalls", data=self.recalls)
+        new_file.create_dataset("tr_lr", data=self.learning_rate)
+
+        new_file.close()
+        
         if self.test_DataLoader is not None:
             self._test()
             print('TESTING COMPLETE')
@@ -257,8 +272,9 @@ class TrainerUNET:
             tip_pixel_distance_within_batch.append(get_central_pixel_distance(out, labels))
 
             batch_iter.set_description(f'Training: (loss {loss_value:.4f})')  # update progressbar
-            
-        save_sample_mask(self.epoch, i, input[0], out[0], sample_batched['mask'][0], path = self.path_dir)
+        
+        if self.epoch % 10 == 0: 
+            save_sample_mask(self.epoch, i, input[0], out[0], sample_batched['mask'][0], path = self.path_dir)
 
         self.training_loss.append(np.mean(train_losses))
         self.pixelwise_accuracy.append(np.mean(pixelwise_accuracy_within_batch))
@@ -328,12 +344,13 @@ class TrainerUNET:
             
                 batch_iter.set_description(f'Test: (loss {loss_value:.4f})')
                 
-        print("Test results:")
-        print(np.mean(test_losses))
-        print(np.mean(pixelwise_accuracies))
-        print(np.mean(precisions))
-        print(np.mean(recalls))
-        print(np.mean(tip_pixel_distances))
+        new_file = h5py.File(self.path_dir+'train_test_data.hdf5', 'a')
+        new_file.create_dataset("test_loss", data=np.mean(test_losses))
+        new_file.create_dataset("test_tip_pixel_distance", data=np.mean(tip_pixel_distances))
+        new_file.create_dataset("test_pixelwise_accuracy", data=np.mean(pixelwise_accuracies))
+        new_file.create_dataset("test_precision", data=np.mean(precisions))
+        new_file.create_dataset("test_recall", data=np.mean(recalls))
+        new_file.close()
 
         batch_iter.close()
 
@@ -356,10 +373,3 @@ trainer = TrainerUNET(model=model,
 # %%
 # start training
 training_losses, validation_losses, lr_rates, pixelwise_accuracy, tip_pixel_distances = trainer.run_trainer()
-#print(list(training_losses))
-#print(list(validation_losses))
-#print(list(lr_rates))
-#print(list(pixelwise_accuracy))
-#print(list(tip_pixel_distances))
-
-# %%
