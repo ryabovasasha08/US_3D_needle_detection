@@ -26,13 +26,13 @@ def get_pixel_accuracy_percent(inputs, targets):
 def get_precision(inputs, targets):
     inputs = torch.round(torch.sigmoid(inputs))
     targets = torch.round(targets)
-        
+    
     # Flatten tensors 
-    mask_flat = targets.view(-1)  
-    pred_flat = inputs.view(-1)
+    mask_flat = targets.view(-1).bool() 
+    pred_flat = inputs.view(-1).bool()
 
-    num_tp = torch.sum(mask_flat == 1 & pred_flat == 1)
-    num_p = torch.sum(pred_flat == 1) 
+    num_tp = torch.sum(mask_flat & pred_flat)
+    num_p = torch.sum(pred_flat) 
 
     # Precision
     precision = num_tp / num_p
@@ -45,11 +45,11 @@ def get_recall(inputs, targets):
     targets = torch.round(targets)
 
     # Flatten tensors 
-    mask_flat = targets.view(-1)  
-    pred_flat = inputs.view(-1)
+    mask_flat = targets.view(-1).bool() 
+    pred_flat = inputs.view(-1).bool()
 
-    num_tp = torch.sum(mask_flat == 1 & pred_flat == 1)
-    num_gt_mask = torch.sum(mask_flat == 1) 
+    num_tp = torch.sum(mask_flat & pred_flat)
+    num_gt_mask = torch.sum(mask_flat) 
 
     # Recall
     recall = num_tp / num_gt_mask
