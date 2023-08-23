@@ -56,9 +56,6 @@ from sklearn.model_selection import train_test_split
 X_train, X_valid = train_test_split(X[300:, :], test_size=VALID_PERCENT, random_state=42, shuffle = True)
 X_test = X[:300, :]
 
-
-X_train, X_vt = train_test_split(X[:, :], test_size=VALID_PERCENT+TEST_PERCENT, random_state=42, shuffle = True)
-X_valid, X_test = train_test_split(X_vt[:, :], test_size=TEST_PERCENT/(VALID_PERCENT+TEST_PERCENT), random_state=42,shuffle=True)
 print(f"Total training images: {X_train.shape[0]}")
 print(f"Total validation images: {X_valid.shape[0]}")
 print(f"Total test images: {X_test.shape[0]}")
@@ -216,7 +213,7 @@ class TrainerUNET:
         save_plots(self.epochs, self.training_loss, self.validation_loss, self.tip_pixel_distances, self.pixelwise_accuracy, self.precisions, self.recalls, self.learning_rate, self.path_dir)
         print('TRAINING COMPLETE')
         
-        new_file = h5py.File(self.path_dir+'train_test_data.hdf5', 'w')
+        new_file = h5py.File(self.path_dir+'/train_test_data.hdf5', 'w')
         new_file.create_dataset("training_loss", data=self.training_loss)
         new_file.create_dataset("valid_loss", data=self.validation_loss)
         new_file.create_dataset("tr_tip_pixel_distance", data=self.tip_pixel_distances)
@@ -344,7 +341,7 @@ class TrainerUNET:
             
                 batch_iter.set_description(f'Test: (loss {loss_value:.4f})')
                 
-        new_file = h5py.File(self.path_dir+'train_test_data.hdf5', 'a')
+        new_file = h5py.File(self.path_dir+'/train_test_data.hdf5', 'a')
         new_file.create_dataset("test_loss", data=np.mean(test_losses))
         new_file.create_dataset("test_tip_pixel_distance", data=np.mean(tip_pixel_distances))
         new_file.create_dataset("test_pixelwise_accuracy", data=np.mean(pixelwise_accuracies))
