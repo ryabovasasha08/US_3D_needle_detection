@@ -209,7 +209,7 @@ class TrainerUNET:
         save_plots(self.epochs, self.training_loss, self.validation_loss, self.tip_pixel_distances, self.pixelwise_accuracy, self.precisions, self.recalls, self.learning_rate, self.path_dir)
         print('TRAINING COMPLETE')
         
-        new_file = h5py.File(self.path_dir+'train_test_data.hdf5', 'w')
+        new_file = h5py.File(self.path_dir+'/train_test_data.hdf5', 'w')
         new_file.create_dataset("training_loss", data=self.training_loss)
         new_file.create_dataset("valid_loss", data=self.validation_loss)
         new_file.create_dataset("tr_tip_pixel_distance", data=self.tip_pixel_distances)
@@ -337,7 +337,7 @@ class TrainerUNET:
             
                 batch_iter.set_description(f'Test: (loss {loss_value:.4f})')        
         
-        new_file = h5py.File(self.path_dir+'train_test_data.hdf5', 'a')
+        new_file = h5py.File(self.path_dir+'/train_test_data.hdf5', 'a')
         new_file.create_dataset("test_loss", data=np.mean(test_losses))
         new_file.create_dataset("test_tip_pixel_distance", data=np.mean(tip_pixel_distances))
         new_file.create_dataset("test_pixelwise_accuracy", data=np.mean(pixelwise_accuracies))
