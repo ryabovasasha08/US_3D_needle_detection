@@ -125,7 +125,6 @@ import numpy as np
 import torch
 from utils.save_model_utils import save_model, save_plots, save_sample_mask
 from utils.accuracies import get_full_mask_tip_pixel_distance, get_pixel_accuracy_percent, get_precision, get_recall
-from utils.mask_utils import binarize_with_softmax
 
 class TrainerUNET:
     def __init__(self,
@@ -245,7 +244,6 @@ class TrainerUNET:
 
         for i, sample_batched in batch_iter:
             input, target, labels = sample_batched['image'].to(self.device), sample_batched['mask'].to(self.device), sample_batched['label'].to(self.device)  # send to device (GPU or CPU)
-            #out = binarize_with_softmax(self.model(input), dimToSqueeze=1)  # one forward pass
             out = self.model(input)
             
             #if i%30 == 0:
@@ -294,7 +292,6 @@ class TrainerUNET:
             input, target = sample_batched['image'].to(self.device), sample_batched['mask'].to(self.device)   # send to device (GPU or CPU)
 
             with torch.no_grad():
-                # out = binarize_with_softmax(self.model(input), dimToSqueeze=1) 
                 out = self.model(input)
                 loss = self.criterion(out, target)
                 loss_value = loss.item()
@@ -318,14 +315,13 @@ class TrainerUNET:
         precisions = []
         recalls = []
         tip_pixel_distances = []
-        batch_iter = tqdm(enumerate(self.validation_DataLoader), 'Test', total=len(self.validation_DataLoader),
+        batch_iter = tqdm(enumerate(self.test_DataLoader), 'Test', total=len(self.test_DataLoader),
                           leave=False)
 
         for i, sample_batched in batch_iter:
             input, target, labels = sample_batched['image'].to(self.device), sample_batched['mask'].to(self.device), sample_batched['label'].to(self.device)  # send to device (GPU or CPU)
 
             with torch.no_grad():
-                # out = binarize_with_softmax(self.model(input), dimToSqueeze=1) 
                 out = self.model(input)
                 loss = self.criterion(out, target)
                 loss_value = loss.item()

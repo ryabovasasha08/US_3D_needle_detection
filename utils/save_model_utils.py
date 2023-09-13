@@ -3,6 +3,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 from utils.mask_utils import get_center_of_nonzero_4d_slice
 
+"""
+This file contains utils for saving intermediate model weights + some sample results and metrics after each X epoch.
+"""
 # https://debuggercafe.com/saving-and-loading-the-best-model-in-pytorch/
 
 # CHeck if it indeed saves the best model or not

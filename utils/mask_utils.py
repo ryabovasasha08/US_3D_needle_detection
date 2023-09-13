@@ -6,6 +6,7 @@ import torch
 import numpy as np
 from skimage.measure import label
 
+
 # First define the largest connected component of the 4D slice, 
 # then calculate the mean of its pixels' coordinates
 def get_center_of_nonzero_4d_slice(tensor_4d):
@@ -38,8 +39,7 @@ def get_center_of_nonzero_4d_slice(tensor_4d):
     
     return x_mean, y_mean, z_mean
 
-# First define the largest connected component of the 4D slice, 
-# then calculate the mean of its pixels' coordinates
+# For the accuracy 
 def get_ends_of_nonzero_4d_slice(tensor_4d):
     mask = torch.squeeze(tensor_4d, dim=0).detach().cpu().numpy()
     # Label connected components
@@ -84,15 +84,6 @@ def get_ends_of_nonzero_4d_slice(tensor_4d):
         return [(x_mean, y_mean, z_min), (x_mean, y_mean, z_max)]
 
 
-# dim - dimension to binarize
-# by default inputs are expected to be in shape [batch_size, 2, 128, 128, 128], so dim=1 by default
-# if input is passed as [2, 128, 128, 128], then dont forget to change dim to 0!
-def binarize_with_softmax(inputs, dimToSqueeze = 1):
-    probs = torch.nn.functional.softmax(inputs, dim=dimToSqueeze)
-    max_probs, preds = torch.max(probs, dim=dimToSqueeze) 
-    return torch.unsqueeze(preds, dimToSqueeze)
-
-
 def contains_in_needle(point, vertex, radius, tip_length):
     
     # first check if x coord is greater than x_vertex. If it is - point is for sure not part of the needle
@@ -117,9 +108,6 @@ def contains_in_needle(point, vertex, radius, tip_length):
     point_dist = np.linalg.norm(point[1:3]-vertex[1:3])
     
     return point_dist <= radius+np.sqrt(2)/3
-
-
-
 
 
  # needle_diam - in mm, far from needle tip

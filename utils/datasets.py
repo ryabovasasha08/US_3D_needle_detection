@@ -16,16 +16,9 @@ from utils.type_reader import get_image_array
 from utils.dataset_utils import *
 
 class FrameDiffDataset(Dataset):
-    """US Images with a tip needle dataset."""
 
-    # passed X must contain two pairs of frames of the same frame sequence with difference of frame_diff
-    # passed y must contain needle tip coords for the second of the needle frames
+    # passed X must contain set of pairs of frames of the same frame sequence with difference of frame_diff
     def __init__(self, X):
-        """
-        Arguments:
-            transform (callable, optional): Optional transform to be applied
-                on a sample.
-        """
         self.X = X
 
     def __len__(self):
@@ -66,8 +59,7 @@ class FrameDiffDataset(Dataset):
 
 
 class CustomMaskDataset(Dataset):
-    """US Images with a tip needle dataset."""
-    
+        
     def __init__(self, X, maskType='full', maskRadius=6):
         """
         Arguments:
@@ -87,8 +79,7 @@ class CustomMaskDataset(Dataset):
             idx = idx.tolist()
             
         # create frame image based on frame number and filename
-        transformNum = 10
-#        transformNum = random.randint(0, 10)
+        transformNum = random.randint(0, 10)
         frameNumInt = int(float(self.X[idx, 1]))
         frameNumStr = str(frameNumInt)
         h5_file = h5py.File(self.X[idx, 0], 'r')
@@ -124,91 +115,3 @@ class CustomMaskDataset(Dataset):
 def my_collate(batch):
     batch = [b for b in batch if b is not None]
     return default_collate(batch)
-
-
-
-
-
-#################################
-###  Older versions of datasets:
-#################################
-
-class ImageDataset(Dataset):
-    """US Images with a tip needle dataset."""
-
-    def __init__(self, X, y, mask_diam=6, resizeTo=128, transform=None):
-        """
-        Arguments:
-            transform (callable, optional): Optional transform to be applied
-                on a sample.
-        """
-        self.X = X
-        self.y = y
-        self.resizeTo = resizeTo
-        self.mask_diam = mask_diam
-        self.transform = transform
-
-    def __len__(self):
-        return len(self.y)
-
-    def __getitem__(self, idx):
-        if torch.is_tensor(idx):
-            idx = idx.tolist()
-
-        input_img, mask_img, us_tip_coords_resized, us_tip_coords_flattened_resized = \
-            getImageDatasetDatapointResized(self.X[idx, 0], int(float(self.X[idx, 1])), self.y[idx], mask_diam=self.mask_diam, resizeTo=self.resizeTo)
-
-        sample = {'image': input_img, 'mask': mask_img, 'label': us_tip_coords_resized, 'label_1D':us_tip_coords_flattened_resized}
-
-        # TODO: use transforms: https://pytorch.org/tutorials/beginner/data_loading_tutorial.html
-        if self.transform:
-            sample = self.transform(sample)
-            
-        # Check if data is correct, i.e. label is within range and mask is of correct size
-        if (sample['label'] > 1).all() and (sample['label'] < self.resizeTo).all() and (np.count_nonzero(sample['mask']) == self.mask_diam**3): 
-            return sample
-        else:
-            # return None to skip this sample
-            return None
-
-
-class FullMaskDataset(Dataset):
-    """US Images with a tip needle dataset."""
-
-    def __init__(self, X, y, cropTo=128):
-        """
-        Arguments:
-            transform (callable, optional): Optional transform to be applied
-                on a sample.
-        """
-        self.X = X
-        self.y = y
-        self.cropTo = cropTo
-
-    def __len__(self):
-        return len(self.y)
-
-    def __getitem__(self, idx):
-        if torch.is_tensor(idx):
-            idx = idx.tolist()
-            
-        # create frame image based on frame number and filename
-        f = self.X[idx, 0][:-4].split("/")[-1]
-        h5_file = h5py.File('../train/trainh5_chunked/'+f+'.hdf5', 'r')
-        img = h5_file['default'][int(float(self.X[idx, 1]))]
-        h5_file.close()
-        h5_mask_file = h5py.File('../train/needle_masks_h5/'+f+'.hdf5', 'r')
-        mask = h5_mask_file['default'][int(float(self.X[idx, 1]))]
-        h5_mask_file.close()
-
-        img, mask, coords = transformAndCropWithLabel(img, mask, self.y[idx], self.cropTo)
-    
-        
-        sample = {'image': img, 'mask': mask, 'label': coords}
-            
-        # Check if data is correct, i.e. label is within range and mask is of correct size
-        if (sample['label'] > 1).all() and (sample['label'] < self.cropTo).all(): 
-            return sample
-        else:
-            # return None to skip this sample
-            return None

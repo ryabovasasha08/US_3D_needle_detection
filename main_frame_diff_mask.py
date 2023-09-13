@@ -250,7 +250,6 @@ class TrainerUNET:
         for i, sample_batched in batch_iter:
             input, target, labels = sample_batched['image'].to(self.device), sample_batched['mask'].to(self.device), sample_batched['label'].to(self.device)  # send to device (GPU or CPU)
             self.optimizer.zero_grad()  # zerograd the parameters
-            #out = binarize_with_softmax(self.model(input), dimToSqueeze=1)  # one forward pass
             out = self.model(input)
             
             target.requires_grad_(True)
@@ -298,7 +297,6 @@ class TrainerUNET:
             input, target = sample_batched['image'].to(self.device), sample_batched['mask'].to(self.device)   # send to device (GPU or CPU)
 
             with torch.no_grad():
-                # out = binarize_with_softmax(self.model(input), dimToSqueeze=1) 
                 out = self.model(input)
                 loss = self.criterion(out, target)
                 loss_value = loss.item()
@@ -322,14 +320,13 @@ class TrainerUNET:
         precisions = []
         recalls = []
         tip_pixel_distances = []
-        batch_iter = tqdm(enumerate(self.validation_DataLoader), 'Test', total=len(self.validation_DataLoader),
+        batch_iter = tqdm(enumerate(self.test_DataLoader), 'Test', total=len(self.test_DataLoader),
                           leave=False)
 
         for i, sample_batched in batch_iter:
             input, target, labels = sample_batched['image'].to(self.device), sample_batched['mask'].to(self.device), sample_batched['label'].to(self.device)  # send to device (GPU or CPU)
 
             with torch.no_grad():
-                # out = binarize_with_softmax(self.model(input), dimToSqueeze=1) 
                 out = self.model(input)
                 loss = self.criterion(out, target)
                 loss_value = loss.item()

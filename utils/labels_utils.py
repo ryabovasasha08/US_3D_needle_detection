@@ -10,7 +10,6 @@ def get_all_files_mhd(dir = "/data/Riabova/train3"):
     return all_files_mhd
 
 def get_labels(f, info):
-    
     labels = np.zeros((info['Dimensions'][3], 3))
         
     for frame in range(0, info['Dimensions'][3]):

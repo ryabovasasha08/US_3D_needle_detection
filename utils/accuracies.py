@@ -3,6 +3,11 @@ import numpy as np
 from utils.mask_utils import get_center_of_nonzero_4d_slice, get_ends_of_nonzero_4d_slice
 
 def get_pixel_accuracy_percent(inputs, targets):
+    """To get pixelwise accuracy. Invariant to dimensionality, as long as arguments have same shape
+    Args:
+        inputs: predicted mask by network. Type - Torch tensor
+        targets: GT mask. Type - Torch tensor
+    """
     
     inputs = torch.round(torch.sigmoid(inputs))
     targets = torch.round(targets)
@@ -22,8 +27,15 @@ def get_pixel_accuracy_percent(inputs, targets):
 
     return acc.item()*100
 
-# precision is a ratio of correctly defined mask pixels wrt all defined mask pixels: TP/(TP+FP)
 def get_precision(inputs, targets):
+    """
+    To get precision. 
+    Precision is a ratio of correctly defined mask pixels wrt all defined mask pixels: TP/(TP+FP)
+    Function is invariant to dimensionality, as long as arguments have same shape
+    Args:
+        inputs: predicted mask by network. Type - Torch tensor
+        targets: GT mask. Type - Torch tensor
+    """
     inputs = torch.round(torch.sigmoid(inputs))
     targets = torch.round(targets)
     
@@ -41,6 +53,14 @@ def get_precision(inputs, targets):
 
 # recall is a ratio of correctly defined mask pixels wrt all GT mask pixels: TP/(TP+FN)
 def get_recall(inputs, targets):
+    """
+    To get recall. 
+    Recall is a ratio of correctly defined mask pixels wrt all GT mask pixels: TP/(TP+FN)
+    Function is invariant to dimensionality, as long as arguments have same shape
+    Args:
+        inputs: predicted mask by network. Type - Torch tensor
+        targets: GT mask. Type - Torch tensor
+    """
     inputs = torch.round(torch.sigmoid(inputs))
     targets = torch.round(targets)
 
@@ -58,6 +78,14 @@ def get_recall(inputs, targets):
     
 
 def get_central_pixel_distance(inputs, labels):
+    """
+    To calculate the 3D Euclidean distance between center of the predicted mask and GT tip coordinate. 
+    Is used for distance estimation Mask 3 and Mask 1
+    Args:
+        inputs: batch of predicted masks by network. Type - 4D Torch tensor
+        labels: batch of correponding GT labels (after augmentation).
+    """
+    
     inputs = torch.round(torch.sigmoid(inputs))
     batch_size = len(inputs)
     distance = 0
@@ -74,6 +102,15 @@ def get_central_pixel_distance(inputs, labels):
     return distance/(batch_size-batches_to_ignore)
 
 def get_full_mask_tip_pixel_distance(inputs, labels):
+    
+    """
+    To predict needle tip position for Mask 2 and ccalculate the 3D Euclidean distance between this prediction and GT tip coordinate. 
+    First calculates ends of the needle on each image from the batch, then defines "correct" end and calculates distance to GT label.
+    Args:
+        inputs: batch of predicted masks by network. Type - 4D Torch tensor
+        labels: batch of correponding GT labels (after augmentation).
+    """
+    
     inputs = torch.round(torch.sigmoid(inputs))
     batch_size = len(inputs)
     distance = 0
